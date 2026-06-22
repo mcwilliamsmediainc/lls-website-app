@@ -33,6 +33,9 @@ export const env = {
 
   authSecret: required("AUTH_SECRET"),
   totpIssuer: optional("TOTP_ISSUER", "LLS Build Workspace"),
+  /** When true, accounts without a provisioned TOTP secret cannot obtain a
+   * fully authenticated session. Off for internal testing, on before launch. */
+  mfaRequired: optional("MFA_REQUIRED", "false") === "true",
   /** Shared secret the worker presents on internal callback routes. */
   workerToken: optional("WORKER_API_TOKEN", ""),
 

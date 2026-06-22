@@ -18,6 +18,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler, HttpError } from "../middleware/error.js";
 import { permissionsFor } from "../lib/permissions.js";
 import { writeAudit } from "../lib/audit.js";
+import { env } from "../lib/env.js";
 
 export const authRouter = Router();
 
@@ -44,18 +45,32 @@ authRouter.post(
       throw new HttpError(401, "Invalid credentials");
     }
 
-    // If a TOTP secret is provisioned for this member, require a valid code.
+    // MFA. A member with a provisioned TOTP secret must always present a valid
+    // code. A member without one can only get a fully authed session when MFA
+    // enforcement is off (internal testing); when MFA_REQUIRED is on there is no
+    // enrollment flow in this build, so login is refused rather than silently
+    // bypassing MFA (the previous bug).
+    let mfaSatisfied: boolean;
     if (member.totpSecret) {
       if (!token || !verifyToken(token, member.totpSecret)) {
         throw new HttpError(401, "Invalid or missing MFA code", "MFA_REQUIRED");
       }
+      mfaSatisfied = true;
+    } else if (env.mfaRequired) {
+      throw new HttpError(
+        403,
+        "MFA is required but not enrolled for this account. An administrator must provision a TOTP secret before you can sign in.",
+        "MFA_ENROLLMENT_REQUIRED"
+      );
+    } else {
+      mfaSatisfied = true;
     }
 
     const session = issueSession({
       sub: member.id,
       role: member.role,
       username: member.username,
-      mfa: true,
+      mfa: mfaSatisfied,
     });
     res.cookie(COOKIE_NAME, session, cookieOptions());
 
