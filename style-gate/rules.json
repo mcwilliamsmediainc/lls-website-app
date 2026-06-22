@@ -1,0 +1,21 @@
+{
+  "banned_words": [
+    "utilize", "leverage", "synergy", "seamless", "cutting-edge",
+    "state-of-the-art", "world-class", "best-in-class", "innovative",
+    "passionate", "dedicated", "committed", "comprehensive", "holistic",
+    "game-changing", "revolutionary", "transformative", "robust", "scalable",
+    "tailor-made", "bespoke", "curated", "empower", "streamline",
+    "best practices", "at the end of the day", "moving forward",
+    "it goes without saying", "in conclusion", "in summary",
+    "don't hesitate", "feel free to", "rest assured"
+  ],
+  "banned_patterns": [
+    "—",
+    "–",
+    "\\!(?=[^'])"
+  ],
+  "verify_required_patterns": [
+    "award", "certified", "licensed", "insured", "years of experience",
+    "rated #1", "top rated", "best in", "voted", "recognized"
+  ]
+}

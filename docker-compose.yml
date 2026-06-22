@@ -1,0 +1,167 @@
+# LLS Production Build Workspace — local pipeline stack.
+#
+# Brings up Postgres, Redis, MinIO (local S3), the API, the worker, and the web
+# dev server so you can run the full intake -> content pipeline on your machine.
+#
+# Usage:
+#   1. cp .env.docker.example .env   and set ANTHROPIC_API_KEY (and GEMINI_API_KEY for GBP/geo).
+#   2. docker compose up --build
+#   3. Open http://localhost:5173  (web)  /  http://localhost:3000/health (api)
+#      MinIO console: http://localhost:9001  (minioadmin / minioadmin)
+#
+# The "migrate" service pushes the Drizzle schema and seeds the team roster, then
+# exits; api/worker wait for it. In production use generate + migrate instead of push.
+
+name: lls
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: lls
+      POSTGRES_PASSWORD: lls
+      POSTGRES_DB: lls
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lls -d lls"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    # AOF persistence per spec (queue state reconstructible).
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-shot: create the workspace bucket in MinIO.
+  createbuckets:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 minioadmin minioadmin &&
+      mc mb --ignore-existing local/lls-workspace &&
+      echo 'bucket ready';
+      "
+
+  # One-shot: push schema + seed team roster, then exit.
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://lls:lls@postgres:5432/lls
+      SEED_DEFAULT_PASSWORD: ${SEED_DEFAULT_PASSWORD:-localdev123}
+    # Applies the committed versioned migrations (same path Tyler uses in prod), then seeds.
+    command: ["sh", "-c", "pnpm --filter @lls/db migrate && pnpm --filter @lls/db seed"]
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      createbuckets:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: development
+      PORT: "3000"
+      DATABASE_URL: postgres://lls:lls@postgres:5432/lls
+      REDIS_URL: redis://redis:6379
+      AUTH_SECRET: ${AUTH_SECRET:-local-dev-secret-change-me}
+      WORKER_API_TOKEN: ${WORKER_API_TOKEN:-local-worker-token}
+      CORS_ORIGINS: http://localhost:5173
+      ONBOARDING_BASE_URL: http://localhost:5173
+      # MinIO (local S3)
+      DO_SPACES_KEY: minioadmin
+      DO_SPACES_SECRET: minioadmin
+      DO_SPACES_BUCKET: lls-workspace
+      DO_SPACES_REGION: us-east-1
+      DO_SPACES_ENDPOINT: http://minio:9000
+      DO_SPACES_FORCE_PATH_STYLE: "true"
+    ports:
+      - "3000:3000"
+    command: ["node", "packages/api/dist/index.js"]
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    depends_on:
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_started
+      createbuckets:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: development
+      WORKER_ID: worker-local
+      DATABASE_URL: postgres://lls:lls@postgres:5432/lls
+      REDIS_URL: redis://redis:6379
+      API_BASE_URL: http://api:3000
+      WORKER_API_TOKEN: ${WORKER_API_TOKEN:-local-worker-token}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-6}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GOOGLE_DRIVE_KB_FOLDER_ID: ${GOOGLE_DRIVE_KB_FOLDER_ID:-}
+      GOOGLE_DRIVE_OAUTH_TOKEN: ${GOOGLE_DRIVE_OAUTH_TOKEN:-}
+      CONCURRENT_BUILDS: "3"
+    command: ["node", "packages/worker/dist/index.js"]
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      API_PROXY_TARGET: http://api:3000
+    ports:
+      - "5173:5173"
+    command: ["pnpm", "--filter", "@lls/web", "dev", "--", "--host", "--port", "5173"]
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:

@@ -1,0 +1,31 @@
+# LLS — local development image (single image, used by api / worker / web / migrate)
+# Build context is the repo root. Keeps devDependencies so drizzle-kit, tsx, and
+# vite are available. For production, use packages/worker/Dockerfile and a pruned
+# API image instead.
+
+FROM node:20-slim
+ENV PNPM_HOME="/pnpm" PATH="/pnpm:$PATH"
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+ && rm -rf /var/lib/apt/lists/* \
+ && corepack enable
+
+WORKDIR /app
+
+# Install dependencies first (layer cache). Copy manifests for every workspace.
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
+COPY packages/db/package.json packages/db/
+COPY packages/style-gate/package.json packages/style-gate/
+COPY packages/api/package.json packages/api/
+COPY packages/worker/package.json packages/worker/
+COPY packages/web/package.json packages/web/
+RUN pnpm install --frozen-lockfile
+
+# Copy the rest of the source and build the compiled packages.
+COPY . .
+RUN pnpm --filter @lls/db build \
+ && pnpm --filter @lls/style-gate build \
+ && pnpm --filter @lls/api build \
+ && pnpm --filter @lls/worker build
+
+# Default command is overridden per service in docker-compose.yml.
+CMD ["node", "packages/api/dist/index.js"]

@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Drizzle
+packages/db/drizzle/meta/_journal.bak
+
+# Vite
+packages/web/dist/
+
+# Local workspace artifacts (generated client files live in DO Spaces in prod)
+.workspace-cache/
+
+# pnpm temp files (e.g. from interrupted installs on synced folders)
+_tmp_*

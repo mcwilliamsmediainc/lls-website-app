@@ -1,0 +1,9 @@
+{
+  "home": { "min": 800, "max": 1400 },
+  "service": { "min": 700, "max": 1200 },
+  "service-hub": { "min": 500, "max": 900 },
+  "location": { "min": 600, "max": 1000 },
+  "about": { "min": 500, "max": 900 },
+  "contact": { "min": 150, "max": 400 },
+  "faq": { "min": 400, "max": 800 }
+}
