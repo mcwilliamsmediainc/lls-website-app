@@ -79,6 +79,7 @@ export function ClientWorkspace() {
   const intakeComplete =
     intakeItems.length > 0 && intakeItems.every((c) => c.status === "complete" || c.status === "skipped");
   const canStartContentBuild = client.stage === "content" && intakeComplete && can("queue_job");
+  const gbpNeedsReview = jobs.some((j) => j.taskType === "gbp_verify" && j.status === "needs_review");
 
   return (
     <div className="p-6 space-y-6">
@@ -108,6 +109,14 @@ export function ClientWorkspace() {
           )}
         </div>
       </header>
+
+      {gbpNeedsReview && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <span className="font-semibold">GBP / NAP unverified.</span> The gbp_verify job could not confirm the
+          business name, address, phone, and hours (no available read path or the lookup failed). Confirm the NAP in
+          client-facts.md and mark the intake item complete before starting the content build.
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Checklist */}

@@ -14,7 +14,7 @@ export interface HandlerResult {
   /** Lines appended to the job log. */
   log: string[];
   /** Final status override; defaults to "completed". */
-  status?: "completed" | "failed" | "gate_failed" | "held";
+  status?: "completed" | "failed" | "gate_failed" | "held" | "needs_review";
   errorMessage?: string;
 }
 

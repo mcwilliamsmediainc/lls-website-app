@@ -62,7 +62,9 @@ export const siteTypeEnum = pgEnum("site_type", [
 /** Subscription tier (maintenance scope deferred — placeholder values). */
 export const tierEnum = pgEnum("client_tier", ["tier_1", "tier_2", "tier_3"]);
 
-/** Job lifecycle. gate_failed is distinct from failed. */
+/** Job lifecycle. gate_failed is distinct from failed; needs_review flags a job
+ * that ran but produced unverified output a human must confirm (e.g. GBP/NAP
+ * read with no available verification path). */
 export const jobStatusEnum = pgEnum("job_status", [
   "queued",
   "running",
@@ -70,6 +72,7 @@ export const jobStatusEnum = pgEnum("job_status", [
   "failed",
   "gate_failed",
   "held",
+  "needs_review",
 ]);
 
 /** Generic checklist / change-ticket item status. */

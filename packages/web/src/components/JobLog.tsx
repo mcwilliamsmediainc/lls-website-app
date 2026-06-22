@@ -7,6 +7,7 @@ const STATUS_COLORS: Record<string, string> = {
   failed: "bg-red-200 text-red-900",
   gate_failed: "bg-rust/20 text-rust",
   held: "bg-yellow-200 text-yellow-900",
+  needs_review: "bg-amber-200 text-amber-900",
 };
 
 export function JobStatusBadge({ status }: { status: string }) {

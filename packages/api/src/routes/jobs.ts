@@ -105,7 +105,7 @@ jobsRouter.get(
 /** Worker callback: progress + completion (spec Table 10). */
 const updateSchema = z.object({
   jobId: z.number().int(),
-  status: z.enum(["queued", "running", "completed", "failed", "gate_failed", "held"]),
+  status: z.enum(["queued", "running", "completed", "failed", "gate_failed", "held", "needs_review"]),
   log: z.string().optional(),
   outputFiles: z.array(z.string()).optional(),
   errorMessage: z.string().optional(),

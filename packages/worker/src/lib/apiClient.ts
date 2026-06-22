@@ -28,7 +28,7 @@ async function get<T = unknown>(path: string): Promise<T> {
 
 export interface JobUpdate {
   jobId: number;
-  status: "queued" | "running" | "completed" | "failed" | "gate_failed" | "held";
+  status: "queued" | "running" | "completed" | "failed" | "gate_failed" | "held" | "needs_review";
   log?: string;
   outputFiles?: string[];
   errorMessage?: string;
