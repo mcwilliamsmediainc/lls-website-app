@@ -55,6 +55,11 @@ app.use(errorHandler);
 
 const server = app.listen(env.port, () => {
   console.log(`[api] listening on :${env.port} (${env.nodeEnv})`);
+  if (!env.workerToken) {
+    console.warn("[api] WORKER_API_TOKEN is NOT set — all worker callbacks will 503 until it is configured");
+  } else {
+    console.log(`[api] WORKER_API_TOKEN fingerprint: ${env.workerToken.slice(0, 8)}… (len ${env.workerToken.length})`);
+  }
 });
 
 function shutdown(signal: string) {

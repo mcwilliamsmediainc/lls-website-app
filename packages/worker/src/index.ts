@@ -82,6 +82,9 @@ async function processJob(job: Job<JobPayload>): Promise<void> {
 
 async function main() {
   console.log(`[worker] ${env.workerId} starting (concurrency ${env.concurrentBuilds})`);
+  console.log(
+    `[worker] WORKER_API_TOKEN fingerprint: ${env.workerToken.slice(0, 8)}… (len ${env.workerToken.length}) -> ${env.apiBaseUrl}`
+  );
   await refreshKbCache();
   const stopKb = startKbRefreshLoop();
   heartbeat.start();
