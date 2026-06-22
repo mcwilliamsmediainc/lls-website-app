@@ -15,6 +15,7 @@ import { requirePermission } from "../middleware/permission.js";
 import { requireWorker } from "../middleware/worker.js";
 import { asyncHandler, HttpError } from "../middleware/error.js";
 import { writeAudit } from "../lib/audit.js";
+import { chainSchemaForPage, chainLinkingAndRedirect } from "../lib/orchestrator.js";
 
 export const contentRouter = Router();
 
@@ -61,6 +62,11 @@ contentRouter.post(
       entityId: id,
       ipAddress: req.ip ?? null,
     });
+
+    // Auto-queue internal_linking + redirect_map once every page is approved.
+    const [client] = await db.select().from(clients).where(eq(clients.id, page.clientId)).limit(1);
+    if (client) await chainLinkingAndRedirect(page.clientId, client.slug, auth.sub);
+
     res.json(updated);
   })
 );
@@ -197,10 +203,26 @@ contentRouter.post(
         })
         .where(eq(contentPages.id, existing.id))
         .returning();
+      if (updated) {
+        await chainSchemaForPage(client.id, u.clientSlug, {
+          slug: updated.slug,
+          pageType: updated.pageType,
+          gateStatus: updated.gateStatus,
+          schemaGenerated: updated.schemaGenerated,
+        });
+      }
       res.json(updated);
       return;
     }
     const [created] = await db.insert(contentPages).values(values).returning();
+    if (created) {
+      await chainSchemaForPage(client.id, u.clientSlug, {
+        slug: created.slug,
+        pageType: created.pageType,
+        gateStatus: created.gateStatus,
+        schemaGenerated: created.schemaGenerated,
+      });
+    }
     res.status(201).json(created);
   })
 );

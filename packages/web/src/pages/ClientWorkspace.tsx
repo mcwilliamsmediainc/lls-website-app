@@ -23,6 +23,7 @@ export function ClientWorkspace() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [brain, setBrain] = useState<BrainInjection | null>(null);
   const [copied, setCopied] = useState(false);
+  const [building, setBuilding] = useState(false);
 
   const loadAll = useCallback(() => {
     api.get<Client>(`/api/clients/${slug}`).then(setClient).catch(() => undefined);
@@ -49,6 +50,20 @@ export function ClientWorkspace() {
     loadAll();
   }
 
+  async function startContentBuild() {
+    if (!confirm("Start the content build? This queues page generation for home, about, contact, every service, and every service-area city.")) return;
+    setBuilding(true);
+    try {
+      const r = await api.post<{ pages: number }>(`/api/clients/${slug}/build-content`, {});
+      alert(`Queued ${r.pages} page generation job(s).`);
+      loadAll();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to start content build");
+    } finally {
+      setBuilding(false);
+    }
+  }
+
   function copyLink() {
     if (!brain) return;
     navigator.clipboard.writeText(brain.onboardingUrl);
@@ -60,6 +75,10 @@ export function ClientWorkspace() {
 
   const nextStage = STAGE_ORDER[STAGE_ORDER.indexOf(client.stage) + 1];
   const stageChecklist = checklist.filter((c) => c.stage === client.stage);
+  const intakeItems = checklist.filter((c) => c.stage === "intake");
+  const intakeComplete =
+    intakeItems.length > 0 && intakeItems.every((c) => c.status === "complete" || c.status === "skipped");
+  const canStartContentBuild = client.stage === "content" && intakeComplete && can("queue_job");
 
   return (
     <div className="p-6 space-y-6">
@@ -72,6 +91,11 @@ export function ClientWorkspace() {
           </div>
         </div>
         <div className="flex gap-2">
+          {canStartContentBuild && (
+            <button onClick={startContentBuild} disabled={building} className="rounded bg-navy px-3 py-2 text-sm font-semibold text-white hover:bg-navy/90 disabled:opacity-50">
+              {building ? "Starting…" : "Start Content Build"}
+            </button>
+          )}
           {nextStage && can("add_edit_client") && (
             <button onClick={() => moveStage(nextStage)} className="rounded border border-rust text-rust px-3 py-2 text-sm font-semibold hover:bg-rust hover:text-white">
               Move to {nextStage}

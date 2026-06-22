@@ -11,16 +11,19 @@ import {
   db,
   clients,
   checklistItems,
+  contentPages,
   llsBrainInjectionResponses,
   type ClientStage,
 } from "../lib/db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { requirePermission } from "../middleware/permission.js";
 import { requireWorker } from "../middleware/worker.js";
+import { jobDispatchLimiter } from "../middleware/rateLimit.js";
 import { asyncHandler, HttpError } from "../middleware/error.js";
 import { writeAudit } from "../lib/audit.js";
 import { STAGE_CHECKLISTS, expandDynamicItems } from "../lib/checklistTemplates.js";
 import { workspaceKey, putFile, getFileText, listFiles, presignDownload } from "../lib/spaces.js";
+import { parseBuildInputs, buildPagePlan, enqueueClientJob } from "../lib/orchestrator.js";
 
 export const clientsRouter = Router();
 
@@ -224,6 +227,98 @@ clientsRouter.post(
       ipAddress: req.ip ?? null,
     });
     res.json(updated);
+  })
+);
+
+const buildContentSchema = z.object({
+  services: z.array(z.string()).optional(),
+  serviceAreas: z.array(z.string()).optional(),
+});
+
+/**
+ * Content-phase orchestrator: fan out generate_page jobs for the whole site.
+ * Requires the client to be in the Content stage with every intake checklist
+ * item resolved. Services/cities are read from client-facts.md (override via
+ * the request body). Pre-creates content_pages rows (status=pending) so the
+ * "all approved" gate that auto-queues internal_linking/redirect_map is
+ * well-defined. Schema generation is chained per page on gate pass.
+ */
+clientsRouter.post(
+  "/:slug/build-content",
+  requireAuth,
+  requirePermission("queue_job"),
+  jobDispatchLimiter,
+  asyncHandler(async (req, res) => {
+    const client = await getClientBySlug(req.params.slug);
+    if (!client) throw new HttpError(404, "Client not found");
+    const auth = req.auth!;
+
+    if (client.stage !== "content") {
+      throw new HttpError(409, "Client must be in the Content stage to start a content build");
+    }
+
+    const intake = await db
+      .select()
+      .from(checklistItems)
+      .where(
+        and(
+          eq(checklistItems.clientId, client.id),
+          eq(checklistItems.stage, "intake"),
+          isNull(checklistItems.deletedAt)
+        )
+      );
+    if (!intake.length) throw new HttpError(409, "No intake checklist exists for this client");
+    const open = intake.filter((i) => i.status !== "complete" && i.status !== "skipped");
+    if (open.length) {
+      throw new HttpError(409, `Cannot start content build: ${open.length} intake checklist item(s) still open`);
+    }
+
+    const body = buildContentSchema.parse(req.body ?? {});
+    let facts = "";
+    try {
+      facts = await getFileText(workspaceKey(client.slug, "client-facts.md"));
+    } catch {
+      facts = "";
+    }
+    const parsed = parseBuildInputs(facts);
+    const services = body.services?.length ? body.services : parsed.services;
+    const serviceAreas = body.serviceAreas?.length ? body.serviceAreas : parsed.serviceAreas;
+    if (!services.length && !serviceAreas.length) {
+      throw new HttpError(
+        422,
+        "Could not determine services or service areas from client-facts.md; pass `services` and `serviceAreas` in the request body"
+      );
+    }
+
+    const plan = buildPagePlan(services, serviceAreas);
+    const queued: Array<{ jobId: number; slug: string; pageType: string }> = [];
+    for (const page of plan) {
+      // Pre-create the page target so the all-approved gate counts the full set.
+      await db
+        .insert(contentPages)
+        .values({ clientId: client.id, pageType: page.pageType, slug: page.slug, title: page.title, status: "pending" })
+        .onConflictDoNothing();
+      const job = await enqueueClientJob({
+        clientId: client.id,
+        clientSlug: client.slug,
+        taskType: "generate_page",
+        params: page.params,
+        queuedBy: auth.sub,
+      });
+      queued.push({ jobId: job.id, slug: page.slug, pageType: page.pageType });
+    }
+
+    await writeAudit({
+      actorId: auth.sub,
+      actorRole: auth.role,
+      action: "start_content_build",
+      entityType: "client",
+      entityId: client.id,
+      newValue: { pages: plan.length, services, serviceAreas },
+      ipAddress: req.ip ?? null,
+    });
+
+    res.status(201).json({ ok: true, pages: plan.length, services, serviceAreas, queued });
   })
 );
 
