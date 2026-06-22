@@ -16,6 +16,7 @@ import { checklistRouter } from "./routes/checklist.js";
 import { contentRouter } from "./routes/content.js";
 import { deploymentsRouter } from "./routes/deployments.js";
 import { systemRouter } from "./routes/system.js";
+import { teamRouter } from "./routes/team.js";
 import { photosRouter } from "./routes/photos.js";
 import { onboardingPublicRouter, onboardingWorkspaceRouter } from "./routes/onboarding.js";
 
@@ -49,6 +50,7 @@ app.use("/api/jobs", jobsRouter);
 app.use("/api", contentRouter); // /content/* and /clients/:slug/content
 app.use("/api", deploymentsRouter); // /deployments/:id/result
 app.use("/api/system", systemRouter);
+app.use("/api/team", teamRouter);
 
 app.use(notFound);
 app.use(errorHandler);

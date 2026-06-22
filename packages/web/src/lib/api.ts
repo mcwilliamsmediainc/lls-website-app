@@ -117,6 +117,20 @@ export interface BrainInjection {
   answers: Record<string, string | null> | null;
 }
 
+export interface TeamMember {
+  id: number;
+  name: string;
+  role: string;
+  username: string;
+  email: string;
+  active: boolean;
+  hasTotp: boolean;
+}
+
+export const TEAM_ROLES = [
+  "matt", "tiffany", "elise", "chloe", "penn", "rachelle", "clarence", "tyler", "lindsay",
+] as const;
+
 export interface WorkerHealth {
   workerId: string;
   status: string;
