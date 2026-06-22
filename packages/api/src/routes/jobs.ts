@@ -5,8 +5,8 @@
 
 import { Router } from "express";
 import { z } from "zod";
-import { and, eq, desc } from "drizzle-orm";
-import { db, jobs, clients } from "../lib/db.js";
+import { and, eq, desc, isNull } from "drizzle-orm";
+import { db, jobs, clients, contentPages } from "../lib/db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { requirePermission } from "../middleware/permission.js";
 import { requireWorker } from "../middleware/worker.js";
@@ -36,6 +36,26 @@ jobsRouter.post(
 
     const [client] = await db.select().from(clients).where(eq(clients.slug, clientSlug)).limit(1);
     if (!client) throw new HttpError(404, "Client not found");
+
+    // internal_linking requires every Phase 1 content page to be approved
+    // (spec Table 26). Enforce it here rather than relying on the worker hold.
+    if (taskType === "internal_linking") {
+      const pages = await db
+        .select({ slug: contentPages.slug, title: contentPages.title, status: contentPages.status })
+        .from(contentPages)
+        .where(and(eq(contentPages.clientId, client.id), isNull(contentPages.deletedAt)));
+      if (pages.length === 0) {
+        throw new HttpError(409, "Cannot queue internal_linking: no content pages exist for this client yet");
+      }
+      const unapproved = pages.filter((p) => p.status !== "approved");
+      if (unapproved.length > 0) {
+        const names = unapproved.map((p) => `${p.title ?? p.slug} (${p.status})`);
+        throw new HttpError(
+          409,
+          `Cannot queue internal_linking: ${unapproved.length} page(s) not approved: ${names.join(", ")}`
+        );
+      }
+    }
 
     const [job] = await db
       .insert(jobs)
