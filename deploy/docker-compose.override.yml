@@ -1,0 +1,14 @@
+# Droplet override — copy to the repo root as docker-compose.override.yml.
+# Compose auto-merges a file named docker-compose.override.yml from the working dir.
+#
+# The base docker-compose.yml hardcodes CORS_ORIGINS / ONBOARDING_BASE_URL to
+# localhost:5173 (fine for a laptop). On a droplet accessed by IP or hostname those
+# must point at the public URL or the web app's /api calls and onboarding links break.
+# DROPLET_PUBLIC_URL comes from .env (e.g. http://203.0.113.10:5173).
+
+services:
+  api:
+    environment:
+      CORS_ORIGINS: ${DROPLET_PUBLIC_URL}
+      ONBOARDING_BASE_URL: ${DROPLET_PUBLIC_URL}
+      APP_URL: ${DROPLET_PUBLIC_URL}

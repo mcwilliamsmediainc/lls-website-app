@@ -1,0 +1,38 @@
+#cloud-config
+# DigitalOcean droplet "User data" for the LLS Build Workspace.
+# Paste this whole file into the User data field when creating the droplet (step 1).
+# It runs steps 2-7 automatically on first boot.
+#
+# BEFORE PASTING: edit the three REPLACE_ME values in the write_files block below.
+# The public URL is filled in automatically from the droplet metadata at boot.
+
+package_update: true
+packages:
+  - git
+  - curl
+
+write_files:
+  - path: /root/lls.env
+    permissions: "0600"
+    content: |
+      ANTHROPIC_API_KEY=REPLACE_ME
+      ANTHROPIC_MODEL=claude-sonnet-4-6
+      GEMINI_API_KEY=
+      GOOGLE_DRIVE_KB_FOLDER_ID=1ZYap_nnnvj4q7Sx5jFrlnSHb_D4b9EUj
+      GOOGLE_DRIVE_OAUTH_TOKEN=
+      AUTH_SECRET=REPLACE_ME
+      WORKER_API_TOKEN=REPLACE_ME
+      SEED_DEFAULT_PASSWORD=REPLACE_ME
+      DROPLET_PUBLIC_URL=http://REPLACE_WITH_DROPLET_IP:5173
+
+runcmd:
+  - set -e
+  - REPO_URL="https://github.com/mcwilliamsmediainc/lls-website-app.git"
+  - APP_DIR="/opt/lls-website-app"
+  - git clone "$REPO_URL" "$APP_DIR"
+  # Fill the public URL from the droplet's metadata IP.
+  - IP=$(curl -fsS http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address)
+  - sed -i "s/REPLACE_WITH_DROPLET_IP/${IP}/" /root/lls.env
+  - cp /root/lls.env "$APP_DIR/.env"
+  - chmod +x "$APP_DIR/deploy/bootstrap.sh"
+  - REPO_URL="$REPO_URL" APP_DIR="$APP_DIR" bash "$APP_DIR/deploy/bootstrap.sh" 2>&1 | tee /var/log/lls-bootstrap.log
