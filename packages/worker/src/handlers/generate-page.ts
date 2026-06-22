@@ -7,7 +7,13 @@
  * gate result and [VERIFY] flag count.
  */
 
-import { runStyleGate, summarizeFailure, loadWordCountTargets } from "@lls/style-gate";
+import {
+  runStyleGate,
+  summarizeFailure,
+  loadWordCountTargets,
+  resolveReadingBand,
+  type ReadingLevelTarget,
+} from "@lls/style-gate";
 import { renderPrompt } from "../lib/prompts.js";
 import { callClaude } from "../lib/anthropic.js";
 import { api } from "../lib/apiClient.js";
@@ -24,14 +30,12 @@ const PAGE_PROMPTS: Record<string, string> = {
   contact: "generate-page-contact",
 };
 
-function readingBandFor(pageType: string, explicit: string): { min: number; max: number } | undefined {
-  if (explicit) {
-    const [min, max] = explicit.split("-").map(Number);
-    if (Number.isFinite(min) && Number.isFinite(max)) return { min: min!, max: max! };
-  }
-  // Default: residential-leaning pages 6-7, commercial/service pages 9-10.
-  if (["about", "contact", "home"].includes(pageType)) return { min: 6, max: 8 };
-  return { min: 9, max: 11 };
+/** Parse an explicit "min-max" reading band param (overrides the data-driven band). */
+function parseExplicitBand(explicit: string): ReadingLevelTarget | undefined {
+  if (!explicit) return undefined;
+  const [min, max] = explicit.split("-").map(Number);
+  if (Number.isFinite(min) && Number.isFinite(max)) return { min: min!, max: max! };
+  return undefined;
 }
 
 export const generatePage: JobHandler = async (payload): Promise<HandlerResult> => {
@@ -56,7 +60,11 @@ export const generatePage: JobHandler = async (payload): Promise<HandlerResult> 
 
   const targets = loadWordCountTargets();
   const wcTarget = targets[pageType] ?? targets.service!;
-  const readingBand = readingBandFor(pageType, readingLevelTarget);
+  // Reading band: explicit param wins; otherwise resolved from
+  // reading-level-targets.json (service pages matching restoration/commercial
+  // keywords are bumped to the commercial tree).
+  const classifyText = [service, keyword, titleParam, slug].filter(Boolean).join(" ");
+  const readingBand = parseExplicitBand(readingLevelTarget) ?? resolveReadingBand(pageType, classifyText);
 
   const prompt = renderPrompt(promptName, {
     client_facts: ctx.clientFacts,

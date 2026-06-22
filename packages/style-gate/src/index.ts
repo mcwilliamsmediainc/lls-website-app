@@ -34,6 +34,19 @@ export interface ReadingLevelTarget {
   max: number;
 }
 
+/**
+ * Data-driven reading-level configuration (reading-level-targets.json). Bands
+ * are grouped by "tree" (e.g. residential vs commercial). A page's tree is the
+ * pageTypeTree mapping by default; service pages whose text matches a
+ * commercialKeyword (restoration, water damage, etc.) are bumped to commercial.
+ */
+export interface ReadingLevelConfig {
+  trees: Record<string, ReadingLevelTarget>;
+  defaultTree: string;
+  pageTypeTree: Record<string, string>;
+  commercialKeywords: string[];
+}
+
 export interface GateInput {
   content: string;
   /** Page type key, e.g. "service" | "home" | "location". */
@@ -97,6 +110,38 @@ export function loadWordCountTargets(): WordCountTargets {
     readFileSync(resolve(dir, "word-count-targets.json"), "utf8")
   ) as WordCountTargets;
   return cachedTargets;
+}
+
+let cachedReading: ReadingLevelConfig | null = null;
+
+export function loadReadingLevelTargets(): ReadingLevelConfig {
+  if (cachedReading) return cachedReading;
+  const dir = findStyleGateDir();
+  cachedReading = JSON.parse(
+    readFileSync(resolve(dir, "reading-level-targets.json"), "utf8")
+  ) as ReadingLevelConfig;
+  return cachedReading;
+}
+
+/**
+ * Resolve the reading-level band for a page from reading-level-targets.json.
+ * `classifyText` (service name / keyword / title) lets service pages flip to
+ * the commercial tree when they match a commercialKeyword. Returns undefined
+ * only if the config has no band for the resolved or default tree.
+ */
+export function resolveReadingBand(
+  pageType: string,
+  classifyText = "",
+  config: ReadingLevelConfig = loadReadingLevelTargets()
+): ReadingLevelTarget | undefined {
+  let tree = config.pageTypeTree[pageType] ?? config.defaultTree;
+  if (pageType === "service" && classifyText) {
+    const hay = classifyText.toLowerCase();
+    if (config.commercialKeywords.some((k) => hay.includes(k.toLowerCase()))) {
+      tree = "commercial";
+    }
+  }
+  return config.trees[tree] ?? config.trees[config.defaultTree];
 }
 
 /* -------------------- text analysis -------------------- */
