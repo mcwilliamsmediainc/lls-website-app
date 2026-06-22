@@ -162,7 +162,10 @@ export function runStyleGate(input: GateInput): GateResult {
     }
   }
 
-  // Banned patterns (em dash, en dash, exclamation in body copy).
+  // Banned patterns (em dash, en dash, exclamation in body copy). Checked against
+  // stripped prose so a "!" inside code spans, URLs, or image syntax does not
+  // false-positive — body copy is what the rule targets.
+  const prose = stripMarkdown(input.content);
   for (const pattern of rules.banned_patterns) {
     let re: RegExp;
     try {
@@ -170,7 +173,7 @@ export function runStyleGate(input: GateInput): GateResult {
     } catch {
       continue; // skip malformed pattern rather than crash the gate
     }
-    if (re.test(input.content)) {
+    if (re.test(prose)) {
       const label =
         pattern === "—" ? "em dash" : pattern === "–" ? "en dash" : "exclamation point in body copy";
       violations.push({ kind: "banned_pattern", message: `Banned pattern (${label})` });

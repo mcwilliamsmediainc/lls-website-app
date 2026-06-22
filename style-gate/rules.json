@@ -12,7 +12,7 @@
   "banned_patterns": [
     "—",
     "–",
-    "\\!(?=[^'])"
+    "!"
   ],
   "verify_required_patterns": [
     "award", "certified", "licensed", "insured", "years of experience",
