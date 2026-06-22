@@ -8,14 +8,15 @@
 
 import { Router } from "express";
 import { z } from "zod";
-import { and, eq } from "drizzle-orm";
-import { db, clients, contentPages } from "../lib/db.js";
+import { and, desc, eq, sql } from "drizzle-orm";
+import { db, clients, contentPages, jobs } from "../lib/db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { requirePermission } from "../middleware/permission.js";
 import { requireWorker } from "../middleware/worker.js";
+import { jobDispatchLimiter } from "../middleware/rateLimit.js";
 import { asyncHandler, HttpError } from "../middleware/error.js";
 import { writeAudit } from "../lib/audit.js";
-import { chainSchemaForPage, chainLinkingAndRedirect } from "../lib/orchestrator.js";
+import { chainSchemaForPage, chainLinkingAndRedirect, enqueueClientJob } from "../lib/orchestrator.js";
 
 export const contentRouter = Router();
 
@@ -95,6 +96,74 @@ contentRouter.post(
       ipAddress: req.ip ?? null,
     });
     res.json(updated);
+  })
+);
+
+/**
+ * Re-queue generate_page for a page whose generation failed (gate failure or a
+ * hard job failure). Reuses the most recent generate_page payload for this page
+ * so service/city params match the original; falls back to reconstructing them
+ * from the page row. Resets the page to a regenerating state.
+ */
+contentRouter.post(
+  "/content/:id/retry",
+  requireAuth,
+  requirePermission("queue_job"),
+  jobDispatchLimiter,
+  asyncHandler(async (req, res) => {
+    const id = z.coerce.number().int().parse(req.params.id);
+    const auth = req.auth!;
+    const [page] = await db.select().from(contentPages).where(eq(contentPages.id, id)).limit(1);
+    if (!page) throw new HttpError(404, "Content page not found");
+    const [client] = await db.select().from(clients).where(eq(clients.id, page.clientId)).limit(1);
+    if (!client) throw new HttpError(404, "Client not found");
+
+    const [prior] = await db
+      .select()
+      .from(jobs)
+      .where(
+        and(
+          eq(jobs.clientId, page.clientId),
+          eq(jobs.taskType, "generate_page"),
+          sql`${jobs.payload} ->> 'slug' = ${page.slug}`
+        )
+      )
+      .orderBy(desc(jobs.queuedAt))
+      .limit(1);
+
+    let params: Record<string, unknown>;
+    if (prior && prior.payload && Object.keys(prior.payload).length > 0) {
+      params = prior.payload as Record<string, unknown>;
+    } else {
+      params = { pageType: page.pageType, slug: page.slug, title: page.title ?? page.slug };
+      if (page.pageType === "location") params.city = page.title ?? page.slug;
+      if (page.pageType === "service") params.service = (page.title ?? page.slug).replace(/^Service:\s*/i, "");
+    }
+
+    await db
+      .update(contentPages)
+      .set({ status: "generating", gateStatus: "pending", gateFailureReason: null })
+      .where(eq(contentPages.id, id));
+
+    const job = await enqueueClientJob({
+      clientId: page.clientId,
+      clientSlug: client.slug,
+      taskType: "generate_page",
+      params,
+      queuedBy: auth.sub,
+    });
+
+    await writeAudit({
+      actorId: auth.sub,
+      actorRole: auth.role,
+      action: "retry_generate_page",
+      entityType: "content_page",
+      entityId: id,
+      newValue: { jobId: job.id, slug: page.slug },
+      ipAddress: req.ip ?? null,
+    });
+
+    res.status(201).json({ ok: true, jobId: job.id });
   })
 );
 

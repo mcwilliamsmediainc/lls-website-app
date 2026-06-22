@@ -30,6 +30,15 @@ export function ContentLibrary() {
     }
   }
 
+  async function retry(id: number) {
+    try {
+      await api.post(`/api/content/${id}/retry`);
+      loadPages(slug);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Retry failed");
+    }
+  }
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-4">
@@ -59,6 +68,7 @@ export function ContentLibrary() {
             {pages.map((p) => {
               const flagsResolved = p.verifyFlagsResolved >= p.verifyFlagsCount;
               const canApprove = can("approve_content") && p.gateStatus === "passing" && flagsResolved && p.status !== "approved";
+              const canRetry = can("queue_job") && (p.gateStatus === "failed" || p.status === "rejected");
               return (
                 <tr key={p.id} className="border-t border-sand">
                   <td className="p-3 font-medium text-navy">{p.title ?? p.slug}</td>
@@ -74,11 +84,18 @@ export function ContentLibrary() {
                   <td className="p-3">{p.schemaGenerated ? "yes" : "no"}</td>
                   <td className="p-3 capitalize">{p.status}</td>
                   <td className="p-3">
-                    {canApprove && (
-                      <button onClick={() => approve(p.id)} className="rounded bg-rust text-white px-3 py-1 text-xs font-semibold">
-                        Approve
-                      </button>
-                    )}
+                    <div className="flex gap-2">
+                      {canApprove && (
+                        <button onClick={() => approve(p.id)} className="rounded bg-rust text-white px-3 py-1 text-xs font-semibold">
+                          Approve
+                        </button>
+                      )}
+                      {canRetry && (
+                        <button onClick={() => retry(p.id)} className="rounded border border-rust text-rust px-3 py-1 text-xs font-semibold hover:bg-rust hover:text-white">
+                          Retry
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
