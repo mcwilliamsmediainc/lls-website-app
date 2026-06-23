@@ -8,6 +8,7 @@ import cookieParser from "cookie-parser";
 import { env } from "./lib/env.js";
 import { apiLimiter } from "./middleware/rateLimit.js";
 import { errorHandler, notFound } from "./middleware/error.js";
+import { startReconcilerLoop } from "./lib/reconciler.js";
 
 import { authRouter } from "./routes/auth.js";
 import { clientsRouter } from "./routes/clients.js";
@@ -59,6 +60,8 @@ app.use("/api/status", statusRouter); // token-gated, redacted external monitori
 app.use(notFound);
 app.use(errorHandler);
 
+let stopReconciler: (() => void) | null = null;
+
 const server = app.listen(env.port, () => {
   console.log(`[api] listening on :${env.port} (${env.nodeEnv})`);
   if (!env.workerToken) {
@@ -66,10 +69,14 @@ const server = app.listen(env.port, () => {
   } else {
     console.log(`[api] WORKER_API_TOKEN fingerprint: ${env.workerToken.slice(0, 8)}… (len ${env.workerToken.length})`);
   }
+  // Self-heal jobs whose BullMQ enqueue was lost after the DB row committed.
+  stopReconciler = startReconcilerLoop();
+  console.log("[api] orphaned-job reconciler started");
 });
 
 function shutdown(signal: string) {
   console.log(`[api] ${signal} received, shutting down`);
+  stopReconciler?.();
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(1), 10_000).unref();
 }
