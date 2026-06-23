@@ -18,6 +18,7 @@ export const JOB_TYPES = [
   "redirect_map",
   "wireframe_generate",
   "url_inventory",
+  "wp_intake",
 ] as const;
 
 export type JobType = (typeof JOB_TYPES)[number];

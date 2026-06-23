@@ -23,6 +23,7 @@ import { generateSchema } from "./handlers/generate-schema.js";
 import { internalLinking } from "./handlers/internal-linking.js";
 import { redirectMap } from "./handlers/redirect-map.js";
 import { wireframeGenerate } from "./handlers/wireframe-generate.js";
+import { wpIntake } from "./handlers/wp-intake.js";
 
 const HANDLERS: Record<string, JobHandler> = {
   site_scrape: siteScrape,
@@ -35,6 +36,7 @@ const HANDLERS: Record<string, JobHandler> = {
   internal_linking: internalLinking,
   redirect_map: redirectMap,
   wireframe_generate: wireframeGenerate,
+  wp_intake: wpIntake,
 };
 
 const connection = new Redis(env.redisUrl, { maxRetriesPerRequest: null, enableReadyCheck: false });

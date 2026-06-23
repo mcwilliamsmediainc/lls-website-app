@@ -34,6 +34,9 @@ export const env = {
   geminiApiKey: optional("GEMINI_API_KEY", ""),
   geminiModel: optional("GEMINI_MODEL", "gemini-2.5-flash"),
 
+  /** Private key for SSH into managed-hosting WordPress servers (wp_intake handler). */
+  sshKeyPath: optional("SSH_KEY_PATH", "/root/.ssh/lls-infra-key"),
+
   googleDriveKbFolderId: optional("GOOGLE_DRIVE_KB_FOLDER_ID", ""),
   googleDriveOauthToken: optional("GOOGLE_DRIVE_OAUTH_TOKEN", ""),
   googleDriveMcpUrl: optional("GOOGLE_DRIVE_MCP_URL", "https://drivemcp.googleapis.com/mcp/v1"),
