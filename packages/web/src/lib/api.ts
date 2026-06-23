@@ -149,3 +149,13 @@ export interface Command {
   startedAt: string | null;
   completedAt: string | null;
 }
+
+export interface HeartbeatResponse {
+  ok: boolean;
+  heartbeat: {
+    workerId: string;
+    status: string;
+    lastSeen: string;
+    secondsSinceLastSeen: number;
+  } | null;
+}

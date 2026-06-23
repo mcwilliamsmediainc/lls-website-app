@@ -88,3 +88,33 @@ systemRouter.get(
     res.json(enriched);
   })
 );
+
+/**
+ * Freshest worker heartbeat, for the Command Center "Claude is live" indicator.
+ * Returns the most recently seen worker (or null if none) with the seconds since
+ * its last heartbeat, so the client can apply its own freshness thresholds.
+ */
+systemRouter.get(
+  "/heartbeat",
+  requireAuth,
+  asyncHandler(async (_req, res) => {
+    const [latest] = await db
+      .select()
+      .from(workerHeartbeats)
+      .orderBy(desc(workerHeartbeats.lastSeen))
+      .limit(1);
+    if (!latest) {
+      res.json({ ok: true, heartbeat: null });
+      return;
+    }
+    res.json({
+      ok: true,
+      heartbeat: {
+        workerId: latest.workerId,
+        status: latest.status,
+        lastSeen: latest.lastSeen,
+        secondsSinceLastSeen: Math.round((Date.now() - new Date(latest.lastSeen).getTime()) / 1000),
+      },
+    });
+  })
+);
