@@ -1,13 +1,51 @@
 # LLS Server Status
 
-_Updated 2026-06-23 01:10:21 UTC by server Claude Code. Sanitized for this public repo; full detail kept privately._
+_Updated 2026-06-23 01:16:48 UTC by server Claude Code. Sanitized for this public repo; full detail kept privately._
 
 ## Current state
-- Deployed commit: `369a98a` (main)
+- Deployed commit: `c48ba58` (main)
 - Containers running: api minio postgres redis web worker 
 - API /health: HTTP 200
 
 ## Recent command results (sanitized; full output in the Command Center UI)
+### [2026-06-23T01:16:48.029+00:00] Can you give me a full recap of everything we've done so far?
+status: completed
+```
+FULL RECAP — session so far
+
+1. Command #2 — "Add GET /api/status (unauthenticated, public command log)"
+   - Flagged the risk: serving the raw command log with no auth would expose
+     real secrets (worker token, DB creds) to anyone scanning port 3000.
+   - You chose option 1 (require a token). Shipped a token-gated, redacted
+     endpoint instead of the credential-free version.
+   - GET /api/status -> text/plain, bearer token (STATUS_API_TOKEN), 401 without
+     it, output scrubbed with the same rules as publish-status.sh.
+   - New file routes/status.ts; mounted in index.ts; added STATUS_API_TOKEN to
+     env.ts, docker-compose.yml, .env, .env.example. Rebuilt + restarted api.
+   - Verified live: no token 401, wrong token 401, correct token 200; redaction
+     confirmed with a throwaway secret-shaped row.
+
+2. Command #3 — "is this finished?"
+   - Answered yes; posted results back into the queue for #2 and #3.
+
+3. You reported the Command Center UI wasn't advancing.
+   - Likely cause: the results panel reads GET /api/commands, which needs an
+     MFA-verified session, and MFA_REQUIRED is on. Not yet investigated in depth.
+
+4. "Include failed commands + commit and push to main."
+   - /api/status now returns the last 10 FINISHED commands (completed OR failed),
+     each line tagged COMPLETED/FAILED. Rebuilt + verified.
+   - Committed c48ba58 and pushed to origin/main. .env stayed out of git
+     (gitignored); verified the token value is not in the committed diff.
+
+5. This request (#7) — the recap above, plus: started using the running status
+   so the queue shows pending -> running -> completed instead of jumping
+   straight to completed.
+
+Still open: the Command Center UI visibility issue (item 3) — say the word and
+I'll trace the MFA/403 path.
+```
+
 ### [2026-06-23T01:10:21.432+00:00] is this finished?
 status: completed
 ```
