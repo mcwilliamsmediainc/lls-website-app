@@ -200,6 +200,8 @@ export const clients = pgTable(
     doServerId: text("do_server_id"),
     stagingUrl: text("staging_url"),
     liveUrl: text("live_url"),
+    /** Free-form team notes: intake context, client requests, anything not in client-facts.md. */
+    notes: text("notes"),
     /** Local 40 Phase 2/3 are rank-map gated. Verdict surfaced to the team. */
     rankMapVerdict: text("rank_map_verdict"),
     /** Highest Local 40 phase unlocked for this client. */

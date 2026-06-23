@@ -68,6 +68,7 @@ export interface Client {
   stage: Stage;
   stagingUrl: string | null;
   liveUrl: string | null;
+  notes: string | null;
   rankMapVerdict: string | null;
   phaseUnlocked: number;
   createdAt: string;

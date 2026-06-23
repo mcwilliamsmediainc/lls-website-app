@@ -24,9 +24,17 @@ export function ClientWorkspace() {
   const [brain, setBrain] = useState<BrainInjection | null>(null);
   const [copied, setCopied] = useState(false);
   const [building, setBuilding] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [notesStatus, setNotesStatus] = useState<"idle" | "saving" | "saved">("idle");
 
   const loadAll = useCallback(() => {
-    api.get<Client>(`/api/clients/${slug}`).then(setClient).catch(() => undefined);
+    api
+      .get<Client>(`/api/clients/${slug}`)
+      .then((c) => {
+        setClient(c);
+        setNotes(c.notes ?? "");
+      })
+      .catch(() => undefined);
     api.get<ChecklistItem[]>(`/api/clients/${slug}/checklist`).then(setChecklist).catch(() => undefined);
     api.get<Job[]>(`/api/jobs?clientSlug=${slug}`).then(setJobs).catch(() => undefined);
     api.get<BrainInjection>(`/api/clients/${slug}/brain-injection`).then(setBrain).catch(() => setBrain(null));
@@ -42,6 +50,19 @@ export function ClientWorkspace() {
   async function moveStage(stage: Stage) {
     await api.post(`/api/clients/${slug}/stage`, { stage });
     loadAll();
+  }
+
+  async function saveNotes() {
+    if (!client || notes === (client.notes ?? "")) return;
+    setNotesStatus("saving");
+    try {
+      const updated = await api.patch<Client>(`/api/clients/${slug}`, { notes });
+      setClient(updated);
+      setNotesStatus("saved");
+      setTimeout(() => setNotesStatus("idle"), 2000);
+    } catch {
+      setNotesStatus("idle");
+    }
   }
 
   async function pushToLive() {
@@ -184,6 +205,25 @@ export function ClientWorkspace() {
           </div>
         </section>
       </div>
+
+      {/* Team notes */}
+      <section className="rounded-lg bg-white border border-sand p-4">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="font-bold text-navy">Team notes</h2>
+          <span className="text-xs text-slate/60">
+            {notesStatus === "saving" ? "Saving..." : notesStatus === "saved" ? "Saved" : "Saved on blur"}
+          </span>
+        </div>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          onBlur={saveNotes}
+          disabled={!can("add_edit_client")}
+          rows={4}
+          placeholder="Intake context, client requests, anything not in client-facts.md."
+          className="w-full rounded border border-sand p-2 text-sm text-navy focus:border-rust focus:outline-none disabled:opacity-60"
+        />
+      </section>
 
       {/* Activity log */}
       <section>

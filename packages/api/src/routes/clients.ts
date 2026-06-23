@@ -157,6 +157,7 @@ const updateSchema = z.object({
   tier: z.enum(["tier_1", "tier_2", "tier_3"]).nullable().optional(),
   assignedTo: z.number().int().nullable().optional(),
   liveUrl: z.string().url().nullable().optional(),
+  notes: z.string().nullable().optional(),
   rankMapVerdict: z.string().nullable().optional(),
   phaseUnlocked: z.number().int().min(1).max(5).optional(),
 });
