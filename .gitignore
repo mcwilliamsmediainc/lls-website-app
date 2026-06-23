@@ -34,3 +34,6 @@ packages/web/dist/
 
 # pnpm temp files (e.g. from interrupted installs on synced folders)
 _tmp_*
+
+# Local Claude Code session files
+.claude/

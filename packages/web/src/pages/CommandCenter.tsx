@@ -7,6 +7,7 @@ const C = {
   bg: "#0d0d0d",
   green: "#22c55e",
   white: "#f4f4f4",
+  blue: "#60a5fa",
   amber: "#f59e0b",
   red: "#ef4444",
   dim: "#6b7280",
@@ -235,11 +236,18 @@ export function CommandCenter() {
                     {user0}@{HOST}
                   </span>
                   <span style={{ color: C.dim }}>:~$ </span>
-                  <span style={{ color: C.white }}>{c.instruction}</span>
+                  <span style={{ color: C.blue }}>{c.instruction}</span>
                 </div>
 
                 {c.output && (
-                  <div className="mt-1" style={{ color: c.status === "failed" ? C.red : C.green }}>
+                  <div
+                    className="mt-1"
+                    style={{
+                      color: c.status === "failed" ? C.red : C.white,
+                      fontWeight: 600,
+                      fontSize: "15px",
+                    }}
+                  >
                     {c.output}
                   </div>
                 )}
@@ -291,7 +299,7 @@ export function CommandCenter() {
             autoFocus
             placeholder="type a command…"
             className="flex-1 resize-none bg-transparent outline-none"
-            style={{ color: C.white, fontFamily: MONO, caretColor: C.green }}
+            style={{ color: C.blue, fontFamily: MONO, caretColor: C.blue }}
           />
         </div>
         <div style={{ color: C.dim }} className="mt-1 text-[11px]">

@@ -84,7 +84,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgres://lls:lls@postgres:5432/lls
+      DATABASE_URL: ${DATABASE_URL:-postgres://lls:lls@postgres:5432/lls}
       SEED_DEFAULT_PASSWORD: ${SEED_DEFAULT_PASSWORD:-localdev123}
     # Applies the committed versioned migrations (same path Tyler uses in prod), then seeds.
     command: ["sh", "-c", "pnpm --filter @lls/db migrate && pnpm --filter @lls/db seed"]
@@ -105,7 +105,7 @@ services:
     environment:
       NODE_ENV: development
       PORT: "3000"
-      DATABASE_URL: postgres://lls:lls@postgres:5432/lls
+      DATABASE_URL: ${DATABASE_URL:-postgres://lls:lls@postgres:5432/lls}
       REDIS_URL: redis://redis:6379
       AUTH_SECRET: ${AUTH_SECRET:-local-dev-secret-change-me}
       WORKER_API_TOKEN: ${WORKER_API_TOKEN:-local-worker-token}
@@ -137,7 +137,7 @@ services:
     environment:
       NODE_ENV: development
       WORKER_ID: worker-local
-      DATABASE_URL: postgres://lls:lls@postgres:5432/lls
+      DATABASE_URL: ${DATABASE_URL:-postgres://lls:lls@postgres:5432/lls}
       REDIS_URL: redis://redis:6379
       API_BASE_URL: http://api:3000
       WORKER_API_TOKEN: ${WORKER_API_TOKEN:-local-worker-token}
@@ -160,6 +160,13 @@ services:
       API_PROXY_TARGET: http://api:3000
     ports:
       - "5173:5173"
+    # Dev bind-mount: edit packages/web/src on the host and Vite HMR picks it up
+    # live — no rebuild needed. Anonymous volumes keep the image's installed
+    # node_modules (the host has none) from being hidden by the source mount.
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/packages/web/node_modules
     command: ["pnpm", "--filter", "@lls/web", "dev", "--", "--host", "--port", "5173"]
 
 volumes:

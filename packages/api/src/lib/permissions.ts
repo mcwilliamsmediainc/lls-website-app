@@ -48,6 +48,17 @@ const ALL_ROLES: TeamRole[] = [
 
 const PUSH_TO_LIVE_BUILD_OVERRIDE = true;
 
+/**
+ * ⚠ GLOBAL OVERRIDE — grants every role EVERY permission.
+ * Enabled 2026-06-23 by explicit owner request. When true this BYPASSES the
+ * entire role × feature matrix below, including push_to_live (live WordPress),
+ * delete_client, bypass_style_gate, rollback_deployment, and edit_team_members,
+ * and also grants full audit-log read to everyone.
+ * The MATRIX below is preserved intact: set this back to false to restore the
+ * spec v5.3 Table 28 behavior exactly.
+ */
+const ALLOW_ALL_PERMISSIONS = true;
+
 const MATRIX: Record<Permission, TeamRole[]> = {
   add_edit_client: ["matt", "tiffany", "elise", "penn", "tyler"],
   delete_client: ["matt", "tyler"],
@@ -71,11 +82,13 @@ const MATRIX: Record<Permission, TeamRole[]> = {
 
 /** True if the role is allowed to perform the given action. */
 export function can(role: TeamRole, permission: Permission): boolean {
+  if (ALLOW_ALL_PERMISSIONS) return true;
   return MATRIX[permission].includes(role);
 }
 
 /** Roles that can read ALL audit logs. Others read only their own (spec Table 32). */
 export function canReadAllAuditLogs(role: TeamRole): boolean {
+  if (ALLOW_ALL_PERMISSIONS) return true;
   return role === "matt" || role === "tyler";
 }
 
