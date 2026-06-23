@@ -1,13 +1,28 @@
 # LLS Server Status
 
-_Updated 2026-06-23 01:16:48 UTC by server Claude Code. Sanitized for this public repo; full detail kept privately._
+_Updated 2026-06-23 01:45:43 UTC by server Claude Code. Sanitized for this public repo; full detail kept privately._
 
 ## Current state
-- Deployed commit: `c48ba58` (main)
+- Deployed commit: `5d141f3` (main)
 - Containers running: api minio postgres redis web worker 
 - API /health: HTTP 200
 
 ## Recent command results (sanitized; full output in the Command Center UI)
+### [2026-06-23T01:45:43.022+00:00] git log --oneline -10
+status: completed
+```
+5d141f3 feat: terminal-style command center UI
+7826973 status: command result
+c48ba58 feat(api): add token-gated GET /api/status for external monitoring
+d59052e status: command result
+369a98a status: command result
+9b3ace5 status: command result
+0b57ca3 chore: move STATUS.md to docs/ for GitHub Pages
+425e6e3 status: command result
+5be89e1 status: command result
+d9bef38 status: update STATUS.md (e50c0af)
+```
+
 ### [2026-06-23T01:16:48.029+00:00] Can you give me a full recap of everything we've done so far?
 status: completed
 ```
