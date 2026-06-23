@@ -11,6 +11,15 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    // Behind the nginx reverse proxy the Host header is the droplet IP or
+    // mcwdevs.com, so allow those hosts (Vite rejects unknown hosts otherwise).
+    allowedHosts: [
+      "mcwdevs.com",
+      ".mcwdevs.com",
+      ".locallaunchsystem.com",
+      "142.93.119.251",
+      "localhost",
+    ],
     proxy: {
       "/api": { target: apiTarget, changeOrigin: true },
       "/onboarding": { target: apiTarget, changeOrigin: true },

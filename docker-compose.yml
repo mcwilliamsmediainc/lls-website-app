@@ -169,6 +169,20 @@ services:
       - /app/packages/web/node_modules
     command: ["pnpm", "--filter", "@lls/web", "dev", "--", "--host", "--port", "5173"]
 
+  # Reverse proxy: serves the app on :80 (no port suffix). Routes /api and
+  # /onboarding to Express, everything else to the Vite dev server (HMR ws kept
+  # alive via Upgrade headers in nginx.conf).
+  nginx:
+    image: nginx:alpine
+    depends_on:
+      - api
+      - web
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    restart: unless-stopped
+
 volumes:
   pgdata:
   redisdata:
