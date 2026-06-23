@@ -109,6 +109,7 @@ services:
       REDIS_URL: redis://redis:6379
       AUTH_SECRET: ${AUTH_SECRET:-local-dev-secret-change-me}
       WORKER_API_TOKEN: ${WORKER_API_TOKEN:-local-worker-token}
+      STATUS_API_TOKEN: ${STATUS_API_TOKEN:-}
       CORS_ORIGINS: http://localhost:5173
       ONBOARDING_BASE_URL: http://localhost:5173
       # MinIO (local S3)

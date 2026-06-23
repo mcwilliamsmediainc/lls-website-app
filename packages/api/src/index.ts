@@ -18,6 +18,7 @@ import { deploymentsRouter } from "./routes/deployments.js";
 import { systemRouter } from "./routes/system.js";
 import { teamRouter } from "./routes/team.js";
 import { commandsRouter } from "./routes/commands.js";
+import { statusRouter } from "./routes/status.js";
 import { photosRouter } from "./routes/photos.js";
 import { onboardingPublicRouter, onboardingWorkspaceRouter } from "./routes/onboarding.js";
 
@@ -53,6 +54,7 @@ app.use("/api", deploymentsRouter); // /deployments/:id/result
 app.use("/api/system", systemRouter);
 app.use("/api/team", teamRouter);
 app.use("/api/commands", commandsRouter);
+app.use("/api/status", statusRouter); // token-gated, redacted external monitoring read
 
 app.use(notFound);
 app.use(errorHandler);

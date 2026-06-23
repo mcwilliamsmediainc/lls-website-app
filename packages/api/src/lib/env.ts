@@ -38,6 +38,9 @@ export const env = {
   mfaRequired: optional("MFA_REQUIRED", "false") === "true",
   /** Shared secret the worker presents on internal callback routes. */
   workerToken: optional("WORKER_API_TOKEN", ""),
+  /** Bearer token an external monitoring service presents to GET /api/status.
+   * Distinct from the worker token and user sessions; if empty the endpoint 503s. */
+  statusToken: optional("STATUS_API_TOKEN", ""),
 
   spaces: {
     key: optional("DO_SPACES_KEY"),
