@@ -1,13 +1,28 @@
 # LLS Server Status
 
-_Updated 2026-06-23 01:10:07 UTC by server Claude Code. Sanitized for this public repo; full detail kept privately._
+_Updated 2026-06-23 01:10:21 UTC by server Claude Code. Sanitized for this public repo; full detail kept privately._
 
 ## Current state
-- Deployed commit: `9b3ace5` (main)
+- Deployed commit: `369a98a` (main)
 - Containers running: api minio postgres redis web worker 
 - API /health: HTTP 200
 
 ## Recent command results (sanitized; full output in the Command Center UI)
+### [2026-06-23T01:10:21.432+00:00] is this finished?
+status: completed
+```
+Yes — finished. The GET /api/status endpoint (command #2) is built, deployed,
+and verified live on http://142.93.119.251:3000/api/status.
+
+One thing to know: it is NOT unauthenticated. It requires a bearer token
+(STATUS_API_TOKEN) and redacts secrets from the output, because you chose
+option 1 in chat over the credential-free version. Fetch it with:
+
+  curl -H "Authorization: Bearer <STATUS_API_TOKEN>" http://142.93.119.251:3000/api/status
+
+Token is in /root/lls-website-app/.env. See command #2 result for full detail.
+```
+
 ### [2026-06-23T01:10:07.716+00:00] Add a single unauthenticated GET endpoint GET /api/status that returns the last 10 completed commands as plain text. No auth required. This lets external services read the status log without credentials.
 status: completed
 ```
