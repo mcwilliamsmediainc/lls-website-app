@@ -200,6 +200,12 @@ export const clients = pgTable(
     doServerId: text("do_server_id"),
     stagingUrl: text("staging_url"),
     liveUrl: text("live_url"),
+    /** Managed hosting: when true, intake runs via the wp_intake handler (SSH + WP-CLI
+     * against the client's WordPress server) instead of a public-site scrape. */
+    managedHosting: boolean("managed_hosting").notNull().default(false),
+    serverHost: text("server_host"),
+    serverUser: text("server_user"),
+    serverPath: text("server_path"),
     /** Free-form team notes: intake context, client requests, anything not in client-facts.md. */
     notes: text("notes"),
     /** Local 40 Phase 2/3 are rank-map gated. Verdict surfaced to the team. */
