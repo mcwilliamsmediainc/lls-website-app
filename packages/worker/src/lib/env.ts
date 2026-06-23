@@ -32,6 +32,7 @@ export const env = {
     .filter(Boolean),
 
   geminiApiKey: optional("GEMINI_API_KEY", ""),
+  geminiModel: optional("GEMINI_MODEL", "gemini-2.5-flash"),
 
   googleDriveKbFolderId: optional("GOOGLE_DRIVE_KB_FOLDER_ID", ""),
   googleDriveOauthToken: optional("GOOGLE_DRIVE_OAUTH_TOKEN", ""),

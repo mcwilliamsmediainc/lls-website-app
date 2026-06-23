@@ -6,7 +6,7 @@
 
 import { env } from "./env.js";
 
-const MODEL = "gemini-1.5-pro";
+const MODEL = env.geminiModel;
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 export function geminiAvailable(): boolean {
@@ -24,7 +24,9 @@ export async function groundedQuery(prompt: string): Promise<string> {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       contents: [{ role: "user", parts: [{ text: prompt }] }],
-      tools: [{ google_search_retrieval: {} }],
+      // Gemini 2.0+ uses `google_search`; the older `google_search_retrieval`
+      // tool is only valid on 1.5 models and 400s on 2.0.
+      tools: [{ google_search: {} }],
     }),
   });
   if (!res.ok) {
