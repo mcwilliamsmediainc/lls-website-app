@@ -11,6 +11,7 @@ import { TaskQueue } from "./pages/TaskQueue";
 import { ContentLibrary } from "./pages/ContentLibrary";
 import { PhotoManager } from "./pages/PhotoManager";
 import { Settings } from "./pages/Settings";
+import { CommandCenter } from "./pages/CommandCenter";
 import { Onboarding } from "./pages/Onboarding";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -41,6 +42,7 @@ function Root() {
           <Route path="content" element={<ContentLibrary />} />
           <Route path="photos" element={<PhotoManager />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="commands" element={<CommandCenter />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

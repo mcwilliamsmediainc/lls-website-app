@@ -32,7 +32,8 @@ export type Permission =
   | "bypass_style_gate"
   | "rollback_deployment"
   | "view_activity_logs"
-  | "access_settings";
+  | "access_settings"
+  | "queue_command";
 
 const ALL_ROLES: TeamRole[] = [
   "matt",
@@ -64,6 +65,8 @@ const MATRIX: Record<Permission, TeamRole[]> = {
   rollback_deployment: ["matt", "tyler"],
   view_activity_logs: [...ALL_ROLES, "lindsay"],
   access_settings: ["matt", "tyler"],
+  // Command Center: only matt and tyler may queue instructions for the server operator.
+  queue_command: ["matt", "tyler"],
 };
 
 /** True if the role is allowed to perform the given action. */

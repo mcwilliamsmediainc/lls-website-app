@@ -39,6 +39,32 @@ export function App() {
               {item.label}
             </NavLink>
           ))}
+          {can("queue_command") && (
+            <NavLink
+              to="/commands"
+              className={({ isActive }) =>
+                `flex items-center gap-2 rounded px-3 py-2 text-sm font-medium ${
+                  isActive ? "bg-rust text-white" : "text-sky hover:bg-white/10"
+                }`
+              }
+            >
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <polyline points="4 17 10 11 4 5" />
+                <line x1="12" y1="19" x2="20" y2="19" />
+              </svg>
+              Command Center
+            </NavLink>
+          )}
           {can("access_settings") && (
             <NavLink
               to="/settings"

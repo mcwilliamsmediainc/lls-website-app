@@ -146,6 +146,15 @@ export const workerStatusEnum = pgEnum("worker_status", [
   "stopped",
 ]);
 
+/** Command Center (review-queue) instruction lifecycle. A queued instruction is
+ * executed by a human / Claude-Code operator with judgment, never auto-run. */
+export const commandStatusEnum = pgEnum("command_status", [
+  "pending",
+  "running",
+  "completed",
+  "failed",
+]);
+
 /* ============================================================
  * team_members
  * ========================================================== */
@@ -574,6 +583,31 @@ export const llsAuditLog = pgTable(
 );
 
 /* ============================================================
+ * lls_commands (Command Center review queue)
+ * ========================================================== */
+
+/** Free-form instructions queued from the browser for the server operator
+ * (Claude Code) to run with judgment. There is no auto-executor: a human reads
+ * the row, acts, and posts the result back. Deliberately NOT a remote shell. */
+export const llsCommands = pgTable(
+  "lls_commands",
+  {
+    id: serial("id").primaryKey(),
+    instruction: text("instruction").notNull(),
+    status: commandStatusEnum("status").notNull().default("pending"),
+    output: text("output"),
+    queuedBy: text("queued_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+  },
+  (t) => ({
+    statusIdx: index("lls_commands_status_idx").on(t.status),
+    createdIdx: index("lls_commands_created_idx").on(t.createdAt),
+  })
+);
+
+/* ============================================================
  * Relations
  * ========================================================== */
 
@@ -662,6 +696,8 @@ export type WorkerHeartbeat = typeof workerHeartbeats.$inferSelect;
 export type BrainInjectionResponse = typeof llsBrainInjectionResponses.$inferSelect;
 export type AuditLogEntry = typeof llsAuditLog.$inferSelect;
 export type NewAuditLogEntry = typeof llsAuditLog.$inferInsert;
+export type LlsCommand = typeof llsCommands.$inferSelect;
+export type NewLlsCommand = typeof llsCommands.$inferInsert;
 
 export type TeamRole = (typeof teamRoleEnum.enumValues)[number];
 export type ClientStage = (typeof clientStageEnum.enumValues)[number];

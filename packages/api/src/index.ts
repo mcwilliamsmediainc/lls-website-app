@@ -17,6 +17,7 @@ import { contentRouter } from "./routes/content.js";
 import { deploymentsRouter } from "./routes/deployments.js";
 import { systemRouter } from "./routes/system.js";
 import { teamRouter } from "./routes/team.js";
+import { commandsRouter } from "./routes/commands.js";
 import { photosRouter } from "./routes/photos.js";
 import { onboardingPublicRouter, onboardingWorkspaceRouter } from "./routes/onboarding.js";
 
@@ -51,6 +52,7 @@ app.use("/api", contentRouter); // /content/* and /clients/:slug/content
 app.use("/api", deploymentsRouter); // /deployments/:id/result
 app.use("/api/system", systemRouter);
 app.use("/api/team", teamRouter);
+app.use("/api/commands", commandsRouter);
 
 app.use(notFound);
 app.use(errorHandler);

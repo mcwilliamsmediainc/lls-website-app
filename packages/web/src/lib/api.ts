@@ -43,7 +43,7 @@ export type Permission =
   | "edit_client_facts" | "approve_content" | "edit_schema" | "send_wireframe_review_link"
   | "lock_unlock_revision_rounds" | "view_all_clients" | "edit_team_members"
   | "change_kb_documents" | "bypass_style_gate" | "rollback_deployment"
-  | "view_activity_logs" | "access_settings";
+  | "view_activity_logs" | "access_settings" | "queue_command";
 
 export interface User {
   id: number;
@@ -137,4 +137,15 @@ export interface WorkerHealth {
   jobsProcessed: number;
   secondsSinceLastSeen: number;
   stale: boolean;
+}
+
+export interface Command {
+  id: number;
+  instruction: string;
+  status: "pending" | "running" | "completed" | "failed";
+  output: string | null;
+  queuedBy: string;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
 }
