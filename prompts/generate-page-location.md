@@ -19,7 +19,19 @@ only the page content.
 - No em dashes. No exclamation points in body copy. No phone numbers in body copy.
 - No banned words or phrases.
 - Flag unconfirmed claims inline with `[VERIFY]`.
-- Stay within the word count target and reading level target.
+- Stay within the word count target. Match the reading level target above
+  ({reading_level_target}); that injected band is authoritative, ignore other numbers.
+
+## Readability (the style gate enforces the grade band)
+The reading level target above is a hard ceiling, measured by Flesch-Kincaid grade.
+Your first draft must land at or below it. To hit the band:
+- Short sentences. Keep the average under 16 words and never exceed 25. One idea per
+  sentence; break compound and subordinate clauses into separate sentences.
+- Plain words over jargon. Prefer common one and two syllable words. Replace legalese
+  with everyday language; if a legal term is unavoidable, define it in plain words once.
+- Short paragraphs: two to four short sentences each.
+- Before returning, reread and split any long or clause-stacked sentence.
+- Do not use the em dash character at all; the gate rejects the page on sight.
 
 ## The city-swap test (highest-value rule)
 This page must contain at least 3 facts that are true only of {city}. Pull these from

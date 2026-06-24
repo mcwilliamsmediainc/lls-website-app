@@ -1,7 +1,8 @@
 {
   "trees": {
     "residential": { "min": 6, "max": 7 },
-    "commercial": { "min": 9, "max": 10 }
+    "commercial": { "min": 9, "max": 10 },
+    "legal": { "min": 7, "max": 11 }
   },
   "defaultTree": "residential",
   "pageTypeTree": {
@@ -11,6 +12,9 @@
     "location": "residential",
     "service": "residential",
     "service-hub": "residential"
+  },
+  "verticalTree": {
+    "legal": "legal"
   },
   "commercialKeywords": [
     "restoration",

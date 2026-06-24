@@ -24,10 +24,22 @@ the page content.
 - Never fabricate a fact. Any credential, award, statistic, license, insurance,
   "years in business," or before/after specific that is not confirmed in the client
   facts must be written with an inline `[VERIFY]` flag immediately after the claim.
-- Stay inside the word count target. First draft must land in band, not converge
-  through rewrites.
-- Match the reading level target for this page tree (commercial pages grade 9-10,
-  residential pages grade 6-7 unless the client facts say otherwise).
+- Stay inside the word count target. Do not exceed the maximum; the first draft must
+  land in band, not converge through rewrites.
+- Match the reading level target above ({reading_level_target}). That injected band is
+  authoritative for this client's vertical; ignore any other grade numbers.
+
+## Readability (the style gate enforces the grade band)
+The reading level target above is a hard ceiling, measured by Flesch-Kincaid grade.
+Your first draft must land at or below it. To hit the band:
+- Short sentences. Keep the average under 16 words and never exceed 25. One idea per
+  sentence; break compound and subordinate clauses into separate sentences.
+- Plain words over jargon. Prefer common one and two syllable words. Replace legalese
+  with everyday language (for example "carelessness" or "fault" instead of
+  "negligence"); if a legal term is unavoidable, define it in plain words once.
+- Short paragraphs: two to four short sentences each.
+- Before returning, reread and split any long or clause-stacked sentence.
+- Do not use the em dash character at all; the gate rejects the page on sight.
 
 ## Required structure and behavior
 1. Open with a hook specific to the service and the city (if a city is provided).

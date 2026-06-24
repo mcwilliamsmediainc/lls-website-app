@@ -44,6 +44,13 @@ export interface ReadingLevelConfig {
   trees: Record<string, ReadingLevelTarget>;
   defaultTree: string;
   pageTypeTree: Record<string, string>;
+  /**
+   * Optional vertical -> tree map. When the page's client vertical (e.g. "legal")
+   * has an entry here, that tree wins over pageTypeTree and the commercial-keyword
+   * bump, so a vertical whose copy can't hit the residential band isn't failed
+   * wholesale. Verticals not listed fall back to the existing page-type behavior.
+   */
+  verticalTree?: Record<string, string>;
   commercialKeywords: string[];
 }
 
@@ -132,10 +139,14 @@ export function loadReadingLevelTargets(): ReadingLevelConfig {
 export function resolveReadingBand(
   pageType: string,
   classifyText = "",
-  config: ReadingLevelConfig = loadReadingLevelTargets()
+  config: ReadingLevelConfig = loadReadingLevelTargets(),
+  vertical?: string
 ): ReadingLevelTarget | undefined {
-  let tree = config.pageTypeTree[pageType] ?? config.defaultTree;
-  if (pageType === "service" && classifyText) {
+  // A vertical-specific tree (e.g. legal) takes precedence over the page-type
+  // mapping and the commercial-keyword bump.
+  const verticalTree = vertical ? config.verticalTree?.[vertical] : undefined;
+  let tree = verticalTree ?? config.pageTypeTree[pageType] ?? config.defaultTree;
+  if (!verticalTree && pageType === "service" && classifyText) {
     const hay = classifyText.toLowerCase();
     if (config.commercialKeywords.some((k) => hay.includes(k.toLowerCase()))) {
       tree = "commercial";

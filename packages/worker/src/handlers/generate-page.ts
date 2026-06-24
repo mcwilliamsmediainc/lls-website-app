@@ -64,7 +64,7 @@ export const generatePage: JobHandler = async (payload): Promise<HandlerResult> 
   // reading-level-targets.json (service pages matching restoration/commercial
   // keywords are bumped to the commercial tree).
   const classifyText = [service, keyword, titleParam, slug].filter(Boolean).join(" ");
-  const readingBand = parseExplicitBand(readingLevelTarget) ?? resolveReadingBand(pageType, classifyText);
+  const readingBand = parseExplicitBand(readingLevelTarget) ?? resolveReadingBand(pageType, classifyText, undefined, vertical);
 
   const prompt = renderPrompt(promptName, {
     client_facts: ctx.clientFacts,
