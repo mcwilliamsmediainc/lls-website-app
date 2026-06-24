@@ -41,7 +41,9 @@ export const generateSchema: JobHandler = async (payload): Promise<HandlerResult
     schema_types: schemaTypes,
   });
 
-  const raw = await callClaude(prompt, { budget: "standard", maxTokens: 1500 });
+  // JSON-LD for legal pages (LegalService + Attorney + multi-city areaServed) runs
+  // long; 1500 tokens truncated most outputs into invalid JSON. Give it headroom.
+  const raw = await callClaude(prompt, { budget: "standard", maxTokens: 4000 });
   let schema: unknown;
   try {
     schema = parseJsonOutput(raw);

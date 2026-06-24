@@ -83,6 +83,23 @@ export async function callClaude(prompt: string, opts: ClaudeCallOptions = {}): 
 
 /** Parse a JSON object from a Claude response, tolerating accidental code fences. */
 export function parseJsonOutput<T = unknown>(text: string): T {
-  const cleaned = text.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
-  return JSON.parse(cleaned) as T;
+  const cleaned = text.replace(/^\s*```(?:json|ld\+json)?/i, "").replace(/```\s*$/i, "").trim();
+  // First try a direct parse of the de-fenced text.
+  try {
+    return JSON.parse(cleaned) as T;
+  } catch {
+    // Fallback: extract the outermost JSON value (object or array) and parse that.
+    // Tolerates prose wrapping or trailing text around the JSON. (A response
+    // truncated mid-value still fails here -- that is a max_tokens problem, not a
+    // wrapping one.)
+    const firstObj = cleaned.indexOf("{");
+    const firstArr = cleaned.indexOf("[");
+    const start =
+      firstArr === -1 ? firstObj : firstObj === -1 ? firstArr : Math.min(firstObj, firstArr);
+    const end = Math.max(cleaned.lastIndexOf("}"), cleaned.lastIndexOf("]"));
+    if (start !== -1 && end > start) {
+      return JSON.parse(cleaned.slice(start, end + 1)) as T;
+    }
+    throw new SyntaxError("No JSON value found in model output");
+  }
 }
