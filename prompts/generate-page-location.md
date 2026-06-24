@@ -23,6 +23,8 @@ only the page content.
   not exceed the maximum. If a small community has few local facts, reach the minimum
   by expanding the honest, plain-language explanation of the service and how the firm
   helps injured people there. Do not pad, repeat the city name, or restate sentences.
+- For towns with limited geo data, reach the word count minimum by adding a paragraph
+  on why residents from {city} choose Truskett Law specifically.
 - Match the reading level target above ({reading_level_target}); that injected band is
   authoritative, ignore other numbers.
 

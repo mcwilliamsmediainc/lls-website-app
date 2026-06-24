@@ -49,8 +49,12 @@ export interface ReadingLevelConfig {
    * has an entry here, that tree wins over pageTypeTree and the commercial-keyword
    * bump, so a vertical whose copy can't hit the residential band isn't failed
    * wholesale. Verticals not listed fall back to the existing page-type behavior.
+   *
+   * The value is either a tree name for the whole vertical, or a per-page-type map
+   * with an optional `default` (e.g. legal uses a looser band for location pages,
+   * whose place names naturally inflate reading grade).
    */
-  verticalTree?: Record<string, string>;
+  verticalTree?: Record<string, string | Record<string, string>>;
   commercialKeywords: string[];
 }
 
@@ -143,8 +147,11 @@ export function resolveReadingBand(
   vertical?: string
 ): ReadingLevelTarget | undefined {
   // A vertical-specific tree (e.g. legal) takes precedence over the page-type
-  // mapping and the commercial-keyword bump.
-  const verticalTree = vertical ? config.verticalTree?.[vertical] : undefined;
+  // mapping and the commercial-keyword bump. The vertical entry is either a single
+  // tree name or a per-page-type map (with an optional `default`).
+  const vt = vertical ? config.verticalTree?.[vertical] : undefined;
+  const verticalTree =
+    typeof vt === "string" ? vt : vt ? vt[pageType] ?? vt.default : undefined;
   let tree = verticalTree ?? config.pageTypeTree[pageType] ?? config.defaultTree;
   if (!verticalTree && pageType === "service" && classifyText) {
     const hay = classifyText.toLowerCase();
@@ -202,6 +209,13 @@ export function fleschKincaidGrade(text: string): number {
 
 /* -------------------- the gate -------------------- */
 
+/**
+ * Slack on the reading-grade band edges. Flesch-Kincaid grade swings ~±0.3 between
+ * regenerations of the same prompt, so an exact-boundary check makes borderline
+ * pages flap pass/fail run-to-run. Pages within this margin of the band pass.
+ */
+const READING_GRADE_TOLERANCE = 0.3;
+
 export function runStyleGate(input: GateInput): GateResult {
   const rules = loadRules();
   const targets = loadWordCountTargets();
@@ -253,11 +267,12 @@ export function runStyleGate(input: GateInput): GateResult {
     }
   }
 
-  // Reading level (optional).
+  // Reading level (optional). A small tolerance keeps naturally borderline pages,
+  // whose Flesch-Kincaid grade oscillates run-to-run, from flapping across the edge.
   const readingGrade = fleschKincaidGrade(input.content);
   if (input.readingLevelTarget) {
     const { min, max } = input.readingLevelTarget;
-    if (readingGrade < min || readingGrade > max) {
+    if (readingGrade < min - READING_GRADE_TOLERANCE || readingGrade > max + READING_GRADE_TOLERANCE) {
       violations.push({
         kind: "reading_level",
         message: `Reading grade ${readingGrade} outside target band ${min}-${max}`,
