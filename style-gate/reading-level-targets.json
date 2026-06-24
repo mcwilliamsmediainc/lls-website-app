@@ -3,7 +3,8 @@
     "residential": { "min": 6, "max": 7 },
     "commercial": { "min": 9, "max": 10 },
     "legal": { "min": 7, "max": 11 },
-    "legal_location": { "min": 7, "max": 12 }
+    "legal_location": { "min": 7, "max": 12 },
+    "legal_medical_service": { "min": 7, "max": 12 }
   },
   "defaultTree": "residential",
   "pageTypeTree": {
@@ -16,6 +17,11 @@
   },
   "verticalTree": {
     "legal": { "default": "legal", "location": "legal_location" }
+  },
+  "slugTree": {
+    "surgical-injury": "legal_medical_service",
+    "medical-malpractice": "legal_medical_service",
+    "nursing-home": "legal_medical_service"
   },
   "commercialKeywords": [
     "restoration",

@@ -55,6 +55,15 @@ export interface ReadingLevelConfig {
    * whose place names naturally inflate reading grade).
    */
   verticalTree?: Record<string, string | Record<string, string>>;
+  /**
+   * Optional slug-keyword -> tree override, applied only to verticals that have a
+   * verticalTree entry. When a page's classify text (service/keyword/title/slug)
+   * contains one of these keywords, that tree wins. Used for service pages whose
+   * subject matter inflates reading grade regardless of phrasing (e.g. medical
+   * malpractice / surgical / nursing-home pages get the looser legal_medical_service
+   * band).
+   */
+  slugTree?: Record<string, string>;
   commercialKeywords: string[];
 }
 
@@ -157,6 +166,18 @@ export function resolveReadingBand(
     const hay = classifyText.toLowerCase();
     if (config.commercialKeywords.some((k) => hay.includes(k.toLowerCase()))) {
       tree = "commercial";
+    }
+  }
+  // Slug-keyword override (most specific): subjects whose terminology inflates grade
+  // regardless of phrasing. Scoped to verticals with custom trees (vt present), so it
+  // never touches home-services pages that lack these subjects.
+  if (vt && config.slugTree && classifyText) {
+    const hay = classifyText.toLowerCase();
+    for (const [needle, t] of Object.entries(config.slugTree)) {
+      if (hay.includes(needle.toLowerCase())) {
+        tree = t;
+        break;
+      }
     }
   }
   return config.trees[tree] ?? config.trees[config.defaultTree];
