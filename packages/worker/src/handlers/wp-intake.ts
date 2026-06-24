@@ -7,6 +7,11 @@
  * a raw wp-data.json to the workspace. Trigger: clients with managed_hosting=true,
  * queued as a wp_intake job.
  *
+ * SSH access model (per spec): per-client SSH keys use the Plesk subscription user,
+ * never root. One key per client subscription, scoped to that site's files only. The
+ * connection authenticates as the username stored on the client record (server_user),
+ * not a hardcoded account -- see `const user = client.serverUser` below.
+ *
  * Failure modes (per spec):
  *  - SSH connection failure        -> needs_review (error includes the SSH error)
  *  - WP-CLI not available on host   -> needs_review (suggest manual intake)
@@ -132,6 +137,9 @@ export const wpIntake: JobHandler = async (payload): Promise<HandlerResult> => {
   try {
     log.push(`SSH connected to ${user}@${host}`);
     const P = serverPath;
+    // WP-CLI invocation prefix. Bare `wp` on Plesk runs under the system PHP (5.4),
+    // which WP-CLI rejects, so env.wpCli can carry a full "php-binary ... wp-phar".
+    const wp = env.wpCli;
 
     // Runs a command, recording (but not throwing on) non-zero exits.
     const run = async (cmd: string, label: string): Promise<CmdResult> => {
@@ -144,36 +152,43 @@ export const wpIntake: JobHandler = async (payload): Promise<HandlerResult> => {
     };
 
     // First command doubles as a WP-CLI availability probe (exit 127 = not found).
-    const blogname = await run(`wp option get blogname --path=${P} --format=json`, "option:blogname");
-    if (blogname.code === 127 || /\bwp\b.*(command not found|not found|No such file)/i.test(blogname.stderr)) {
+    const blogname = await run(`${wp} option get blogname --path=${P} --format=json`, "option:blogname");
+    // Bail to needs_review on a hard WP-CLI failure: not-found (127/255) or a launcher
+    // error (e.g. "WP-CLI requires PHP ... newer"). Empty stdout + non-zero exit means
+    // no usable data, so don't let it silently fall through to completed-with-failures.
+    const wpCliUnavailable =
+      blogname.code === 127 ||
+      /command not found|not found|No such file|WP-CLI requires PHP|Error establishing/i.test(blogname.stderr) ||
+      (blogname.code !== 0 && blogname.stdout.trim() === "");
+    if (wpCliUnavailable) {
       return {
         outputFiles: [],
         log,
         status: "needs_review",
-        errorMessage: `WP-CLI not available on ${host} (path ${P}): ${blogname.stderr.trim().slice(0, 300)}. Suggest manual intake.`,
+        errorMessage: `WP-CLI not usable on ${host} (path ${P}, exit ${blogname.code}): ${blogname.stderr.trim().slice(0, 300) || "no output"}. Check WP_CLI_BIN (PHP version / wp path) or suggest manual intake.`,
       };
     }
 
-    const siteurl = await run(`wp option get siteurl --path=${P} --format=json`, "option:siteurl");
-    const blogdescription = await run(`wp option get blogdescription --path=${P} --format=json`, "option:blogdescription");
+    const siteurl = await run(`${wp} option get siteurl --path=${P} --format=json`, "option:siteurl");
+    const blogdescription = await run(`${wp} option get blogdescription --path=${P} --format=json`, "option:blogdescription");
     const pages = await run(
-      `wp post list --post_type=page --post_status=publish --fields=ID,post_title,post_name,post_content --format=json --path=${P}`,
+      `${wp} post list --post_type=page --post_status=publish --fields=ID,post_title,post_name,post_content --format=json --path=${P}`,
       "pages"
     );
     const posts = await run(
-      `wp post list --post_type=post --post_status=publish --fields=ID,post_title,post_name --format=json --path=${P}`,
+      `${wp} post list --post_type=post --post_status=publish --fields=ID,post_title,post_name --format=json --path=${P}`,
       "posts"
     );
-    const users = await run(`wp user list --fields=display_name,user_email,roles --format=json --path=${P}`, "users");
-    const plugins = await run(`wp plugin list --status=active --format=json --path=${P}`, "plugins");
-    const categories = await run(`wp term list category --format=json --path=${P}`, "categories");
+    const users = await run(`${wp} user list --fields=display_name,user_email,roles --format=json --path=${P}`, "users");
+    const plugins = await run(`${wp} plugin list --status=active --format=json --path=${P}`, "plugins");
+    const categories = await run(`${wp} term list category --format=json --path=${P}`, "categories");
 
     // Full content for each published page.
     const pageStubs = tryJson<WpPageStub[]>(pages.stdout) ?? [];
     log.push(`Found ${pageStubs.length} published pages`);
     const pagesFull: unknown[] = [];
     for (const p of pageStubs) {
-      const r = await run(`wp post get ${p.ID} --fields=post_title,post_content,post_name --format=json --path=${P}`, `page:${p.ID}`);
+      const r = await run(`${wp} post get ${p.ID} --fields=post_title,post_content,post_name --format=json --path=${P}`, `page:${p.ID}`);
       pagesFull.push(
         tryJson(r.stdout) ?? {
           ID: p.ID,
@@ -187,7 +202,7 @@ export const wpIntake: JobHandler = async (payload): Promise<HandlerResult> => {
 
     // AIOSEO migration check.
     const aioseo = await run(
-      `wp db query "SELECT post_id,meta_key,meta_value FROM wp_postmeta WHERE meta_key LIKE '_aioseo%' LIMIT 100" --path=${P} --format=json`,
+      `${wp} db query "SELECT post_id,meta_key,meta_value FROM wp_postmeta WHERE meta_key LIKE '_aioseo%' LIMIT 100" --path=${P} --format=json`,
       "aioseo"
     );
 

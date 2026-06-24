@@ -36,6 +36,14 @@ export const env = {
 
   /** Private key for SSH into managed-hosting WordPress servers (wp_intake handler). */
   sshKeyPath: optional("SSH_KEY_PATH", "/root/.ssh/lls-infra-key"),
+  /**
+   * WP-CLI invocation prefix for wp_intake, prepended to every WP-CLI subcommand.
+   * Defaults to bare "wp" (PATH lookup). On Plesk the bare `wp` resolves to a
+   * `#!/usr/bin/env php` script that picks up the ancient system PHP (5.4), which
+   * WP-CLI rejects -- so set this to a full "php-binary ... wp-phar" command, e.g.
+   * "/opt/plesk/php/8.1/bin/php -d error_reporting=0 -d display_errors=0 /usr/local/bin/wp".
+   */
+  wpCli: optional("WP_CLI_BIN", "wp"),
 
   googleDriveKbFolderId: optional("GOOGLE_DRIVE_KB_FOLDER_ID", ""),
   googleDriveOauthToken: optional("GOOGLE_DRIVE_OAUTH_TOKEN", ""),

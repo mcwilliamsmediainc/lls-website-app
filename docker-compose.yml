@@ -145,9 +145,17 @@ services:
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-6}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      # WP-CLI on the Plesk subscription: bare `wp` runs under PHP 5.4 (rejected by
+      # WP-CLI), so invoke a modern Plesk PHP directly against the wp phar, with PHP
+      # notices silenced so stdout stays clean JSON.
+      WP_CLI_BIN: ${WP_CLI_BIN:-/opt/plesk/php/8.1/bin/php -d error_reporting=0 -d display_errors=0 /usr/local/bin/wp}
       GOOGLE_DRIVE_KB_FOLDER_ID: ${GOOGLE_DRIVE_KB_FOLDER_ID:-}
       GOOGLE_DRIVE_OAUTH_TOKEN: ${GOOGLE_DRIVE_OAUTH_TOKEN:-}
       CONCURRENT_BUILDS: "3"
+    # Per-client SSH key for wp_intake (scoped to the Plesk subscription user, never root).
+    # Mounted read-only at the path the worker expects (env.sshKeyPath default).
+    volumes:
+      - /root/.ssh/lls-infra-key:/root/.ssh/lls-infra-key:ro
     command: ["node", "packages/worker/dist/index.js"]
 
   web:
