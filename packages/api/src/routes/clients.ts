@@ -428,6 +428,21 @@ clientsRouter.get(
   })
 );
 
+/** Worker read: the url-inventory.csv (workspace/<slug>/url-inventory.csv) for redirect_map. */
+clientsRouter.get(
+  "/:slug/inventory",
+  requireWorker,
+  asyncHandler(async (req, res) => {
+    let inventoryCsv = "";
+    try {
+      inventoryCsv = await getFileText(workspaceKey(req.params.slug, "url-inventory.csv"));
+    } catch {
+      inventoryCsv = "";
+    }
+    res.json({ inventoryCsv });
+  })
+);
+
 /** Worker callback: write a generated file to the client workspace (spec Table 10). */
 clientsRouter.post(
   "/:slug/files",

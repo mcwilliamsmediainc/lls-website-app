@@ -70,6 +70,9 @@ export const api = {
   getPages: (slug: string) =>
     get<Array<{ slug: string; content: string }>>(`/api/clients/${slug}/pages`),
 
+  getInventory: (slug: string) =>
+    get<{ inventoryCsv: string }>(`/api/clients/${slug}/inventory`),
+
   heartbeat: (body: {
     workerId: string;
     jobsProcessed: number;

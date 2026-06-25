@@ -39,8 +39,18 @@ export const redirectMap: JobHandler = async (payload): Promise<HandlerResult> =
   // Old URLs from inventory.
   let inventoryCsv = paramString(payload.params, "inventoryCsv");
   if (!inventoryCsv) {
-    // Fall back to reading the workspace pages list for new slugs and require inventory in params.
-    log.push("No inventoryCsv passed in params; expected url-inventory.csv content");
+    // No inventory in params: read workspace/<slug>/url-inventory.csv from MinIO via the API.
+    try {
+      const res = await api.getInventory(payload.clientSlug);
+      inventoryCsv = res.inventoryCsv ?? "";
+      log.push(
+        inventoryCsv
+          ? "Loaded url-inventory.csv from workspace"
+          : "url-inventory.csv missing or empty in workspace"
+      );
+    } catch (err) {
+      log.push(`Failed to load url-inventory.csv from workspace: ${(err as Error).message}`);
+    }
   }
   const oldRows = inventoryCsv ? parseInventoryCsv(inventoryCsv) : [];
 

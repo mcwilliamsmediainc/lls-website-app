@@ -191,8 +191,7 @@ contentRouter.post(
  * Gates the internal_linking job (spec Table 26). */
 contentRouter.get(
   "/clients/:slug/content/all-approved",
-  requireAuth,
-  requirePermission("view_all_clients"),
+  requireWorker,
   asyncHandler(async (req, res) => {
     const [client] = await db.select().from(clients).where(eq(clients.slug, req.params.slug)).limit(1);
     if (!client) throw new HttpError(404, "Client not found");
