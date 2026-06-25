@@ -34,9 +34,15 @@ services:
   redis:
     image: redis:7-alpine
     # AOF persistence per spec (queue state reconstructible).
-    command: ["redis-server", "--appendonly", "yes"]
+    # requirepass closes the unauthenticated-access hole (incident 2026-06-25).
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD required}"]
+    environment:
+      # redis-cli (including the healthcheck below) auto-authenticates via this.
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?REDIS_PASSWORD required}
     ports:
-      - "6379:6379"
+      # Bind to loopback only; internal services reach redis via the compose
+      # network (redis:6379), never the published port. (incident 2026-06-25)
+      - "127.0.0.1:6379:6379"
     volumes:
       - redisdata:/data
     healthcheck:
@@ -106,7 +112,7 @@ services:
       NODE_ENV: development
       PORT: "3000"
       DATABASE_URL: ${DATABASE_URL:-postgres://lls:lls@postgres:5432/lls}
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: ${REDIS_URL:?REDIS_URL required}
       AUTH_SECRET: ${AUTH_SECRET:-local-dev-secret-change-me}
       WORKER_API_TOKEN: ${WORKER_API_TOKEN:-local-worker-token}
       STATUS_API_TOKEN: ${STATUS_API_TOKEN:-}
@@ -138,7 +144,7 @@ services:
       NODE_ENV: development
       WORKER_ID: worker-local
       DATABASE_URL: ${DATABASE_URL:-postgres://lls:lls@postgres:5432/lls}
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: ${REDIS_URL:?REDIS_URL required}
       API_BASE_URL: http://api:3000
       WORKER_API_TOKEN: ${WORKER_API_TOKEN:-local-worker-token}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
