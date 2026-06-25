@@ -27,12 +27,30 @@ interface LinkSpec {
 }
 type BatchLinks = Record<string, LinkSpec[]>;
 
-function pageTypeFromSlug(slug: string): string {
+/** Parse the "Service areas" line from client-facts.md into a set of city slugs. */
+function parseServiceAreaSlugs(clientFacts: string): Set<string> {
+  const set = new Set<string>();
+  const m = clientFacts.match(/service areas?:\s*\**\s*(.+)/i);
+  const list = m?.[1];
+  if (list) {
+    for (const city of list.split(",")) {
+      const slug = city.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+      if (slug) set.add(slug);
+    }
+  }
+  return set;
+}
+
+/**
+ * Classify a page. Location pages are matched against the client's service-area
+ * slugs (city slugs like "tulsa" do not contain the word "location"), falling
+ * back to a slug keyword only when facts are unavailable.
+ */
+function pageTypeFromSlug(slug: string, locationSlugs: Set<string>): string {
   if (slug.includes("home")) return "home";
   if (slug.includes("about")) return "about";
   if (slug.includes("contact")) return "contact";
-  if (slug.includes("location")) return "location";
-  if (slug.includes("service")) return "service";
+  if (locationSlugs.has(slug) || slug.includes("location")) return "location";
   return "service";
 }
 
@@ -78,6 +96,17 @@ export const internalLinking: JobHandler = async (payload): Promise<HandlerResul
   const pages = await api.getPages(payload.clientSlug);
   if (!pages.length) {
     return { outputFiles: [], log: ["No pages found to link"], status: "failed", errorMessage: "No pages" };
+  }
+
+  // Location pages are identified by the client's service-area list (city slugs
+  // like "tulsa" don't contain the word "location"). Loaded from client-facts.md.
+  let locationSlugs = new Set<string>();
+  try {
+    const facts = await api.getClientFacts(payload.clientSlug);
+    locationSlugs = parseServiceAreaSlugs(facts.clientFacts);
+    log.push(`Identified ${locationSlugs.size} location page(s) from service areas`);
+  } catch {
+    log.push("Could not load client-facts; location detection falls back to slug keyword");
   }
 
   // Full index of valid link targets (every page).
@@ -153,7 +182,7 @@ export const internalLinking: JobHandler = async (payload): Promise<HandlerResul
     }
     if (applied === 0) continue;
 
-    const gate = runStyleGate({ content, pageType: pageTypeFromSlug(p.slug) });
+    const gate = runStyleGate({ content, pageType: pageTypeFromSlug(p.slug, locationSlugs) });
     await api.writeFile(payload.clientSlug, `pages/${p.slug}.md`, content, "text/markdown");
     outputs.push(`pages/${p.slug}.md`);
     totalLinks += applied;
@@ -162,7 +191,7 @@ export const internalLinking: JobHandler = async (payload): Promise<HandlerResul
       log.push(`Post-link gate FAIL on ${p.slug}: ${summarizeFailure(gate)}`);
       await api.upsertContentPage({
         clientSlug: payload.clientSlug,
-        pageType: pageTypeFromSlug(p.slug),
+        pageType: pageTypeFromSlug(p.slug, locationSlugs),
         slug: p.slug,
         wordCount: gate.wordCount,
         verifyFlagsCount: gate.verifyFlags.length,
