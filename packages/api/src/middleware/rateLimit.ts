@@ -4,6 +4,19 @@
  */
 
 import rateLimit from "express-rate-limit";
+import type { Request } from "express";
+import { env } from "../lib/env.js";
+
+/**
+ * Worker callbacks (job updates, photo registration, checklist completion) authenticate
+ * with the shared x-worker-token secret and must never be rate limited: a large job can
+ * fire hundreds of rapid callbacks, and a 429 on the final one is treated as a job failure
+ * (leaving the jobs row stuck/partial). Only requests presenting the *valid* token are
+ * exempted, so a bogus header cannot be used to bypass the limiter.
+ */
+export function isWorkerRequest(req: Request): boolean {
+  return Boolean(env.workerToken) && req.header("x-worker-token") === env.workerToken;
+}
 
 /** Authenticated API: 100 req/min per user (falls back to IP if unauthenticated). */
 export const apiLimiter = rateLimit({
@@ -12,6 +25,7 @@ export const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => (req.auth?.sub ? `u:${req.auth.sub}` : req.ip ?? "anon"),
+  skip: isWorkerRequest,
   message: { error: "Too many requests" },
 });
 
@@ -22,6 +36,7 @@ export const jobDispatchLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => (req.auth?.sub ? `u:${req.auth.sub}` : req.ip ?? "anon"),
+  skip: isWorkerRequest,
   message: { error: "Job dispatch rate limit exceeded" },
 });
 
