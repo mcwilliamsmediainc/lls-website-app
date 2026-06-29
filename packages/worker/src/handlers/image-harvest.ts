@@ -51,7 +51,7 @@ const ZONE_SUGGESTIONS: Record<Category, string[]> = {
 };
 
 /** Max images harvested per run, to keep the job bounded. */
-const MAX_IMAGES = 200;
+const MAX_IMAGES = 1000;
 /** Skip images smaller than this on external scrape (icons, sprites, spacers). */
 const MIN_EXTERNAL_BYTES = 50 * 1024;
 /** Hard cap on a single image so a base64 callback stays under the API body limit. */
@@ -192,12 +192,22 @@ async function harvestManaged(
   try {
     log.push(`SSH connected to ${user}@${host}`);
     const P = serverPath;
-    const wp = env.wpCli;
+    // --skip-plugins --skip-themes keeps theme/plugin PHP notices (e.g. the Bridge
+    // theme's magic-method warnings under PHP 8) out of stdout so it stays clean JSON.
+    // Media is core, so skipping them does not affect the listing.
+    const wp = `${env.wpCli} --skip-plugins --skip-themes`;
 
-    const list = await sshExec(
-      conn,
-      `${wp} media list --fields=ID,file,url,title,alt_text,post_mime_type --format=json --path=${P}`
-    );
+    // Enumerate image attachments. WP-CLI has no `media list` subcommand, so query
+    // the attachment posts via `wp eval`, returning the same fields (ID, file, url,
+    // title, alt_text, post_mime_type) the spec asks for. `file` is relative to the
+    // uploads basedir; `url` is the public URL.
+    const evalPhp =
+      '$q=get_posts(array("post_type"=>"attachment","post_mime_type"=>"image","numberposts"=>-1,"post_status"=>"inherit"));' +
+      '$o=array();foreach($q as $p){$o[]=array("ID"=>$p->ID,"file"=>get_post_meta($p->ID,"_wp_attached_file",true),' +
+      '"url"=>wp_get_attachment_url($p->ID),"title"=>$p->post_title,' +
+      '"alt_text"=>get_post_meta($p->ID,"_wp_attachment_image_alt",true),"post_mime_type"=>$p->post_mime_type);}' +
+      'echo json_encode($o);';
+    const list = await sshExec(conn, `${wp} eval '${evalPhp}' --path=${P}`);
     const wpCliUnavailable =
       list.code === 127 ||
       /command not found|not found|No such file|WP-CLI requires PHP|Error establishing/i.test(list.stderr) ||
@@ -205,7 +215,7 @@ async function harvestManaged(
     if (wpCliUnavailable) {
       return {
         images: [],
-        needsReview: `WP-CLI media list not usable on ${host} (path ${P}, exit ${list.code}): ${list.stderr.trim().slice(0, 300) || "no output"}. Check WP_CLI_BIN or harvest manually.`,
+        needsReview: `WP-CLI media enumeration not usable on ${host} (path ${P}, exit ${list.code}): ${list.stderr.trim().slice(0, 300) || "no output"}. Check WP_CLI_BIN or harvest manually.`,
       };
     }
 
