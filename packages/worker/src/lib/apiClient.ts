@@ -43,6 +43,28 @@ export const api = {
   writeFile: (slug: string, filename: string, content: string, contentType?: string) =>
     post(`/api/clients/${slug}/files`, { filename, content, contentType }),
 
+  /** Write a binary file (e.g. a harvested image) to the workspace, base64-encoded. */
+  writeBinaryFile: (slug: string, filename: string, bytes: Uint8Array, contentType?: string) =>
+    post(`/api/clients/${slug}/files`, {
+      filename,
+      content: Buffer.from(bytes).toString("base64"),
+      contentType,
+      encoding: "base64",
+    }),
+
+  /** Register a harvested photo record (image_harvest). Worker-authed. */
+  registerPhoto: (
+    slug: string,
+    body: {
+      filename: string;
+      source?: "client" | "gbp" | "ai_generated" | "licensed_stock";
+      zoneType?: string;
+      pageAssigned?: string;
+      altText?: string;
+      generationMetadata?: Record<string, unknown>;
+    }
+  ) => post(`/api/clients/${slug}/photos/harvest`, body),
+
   completeChecklistItem: (slug: string, item: string, status = "complete") =>
     post(`/api/clients/${slug}/checklist`, { item, status }),
 

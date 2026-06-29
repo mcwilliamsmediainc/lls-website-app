@@ -32,7 +32,9 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json({ limit: "2mb" }));
+// 25mb accommodates base64-encoded harvested images (image_harvest worker callback);
+// text callbacks remain far below this.
+app.use(express.json({ limit: "25mb" }));
 app.use(cookieParser());
 
 // Health check (unauthenticated)

@@ -13,6 +13,7 @@ import { requireWorker } from "../middleware/worker.js";
 import { jobDispatchLimiter } from "../middleware/rateLimit.js";
 import { asyncHandler, HttpError } from "../middleware/error.js";
 import { enqueueJob, isJobType } from "../lib/queue.js";
+import { chainImageHarvest } from "../lib/orchestrator.js";
 import { writeAudit } from "../lib/audit.js";
 
 export const jobsRouter = Router();
@@ -153,6 +154,18 @@ jobsRouter.post(
     if (["completed", "failed", "gate_failed"].includes(u.status)) set.completedAt = new Date();
 
     const [updated] = await db.update(jobs).set(set).where(eq(jobs.id, u.jobId)).returning();
+
+    // Intake imagery chain: once wp_intake (managed) or site_scrape (external)
+    // finishes cleanly, auto-queue image_harvest. Idempotent + non-throwing.
+    if (u.status === "completed" && (existing.taskType === "wp_intake" || existing.taskType === "site_scrape")) {
+      const [client] = await db
+        .select({ slug: clients.slug })
+        .from(clients)
+        .where(eq(clients.id, existing.clientId))
+        .limit(1);
+      if (client) await chainImageHarvest(existing.clientId, client.slug, existing.queuedBy);
+    }
+
     res.json(updated);
   })
 );

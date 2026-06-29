@@ -15,6 +15,9 @@ export interface ChecklistTemplateItem {
 export const STAGE_CHECKLISTS: Record<ClientStage, ChecklistTemplateItem[]> = {
   intake: [
     { itemName: "site_scrape job complete" },
+    // Runs after wp_intake (managed) or site_scrape (external) — pulls existing
+    // imagery into the workspace and categorizes it. See image_harvest handler.
+    { itemName: "Image harvest complete" },
     { itemName: "gbp_verify job complete" },
     { itemName: "geo_research job complete (one per service area city)" },
     { itemName: "gap_report job complete" },

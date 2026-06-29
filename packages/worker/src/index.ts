@@ -24,6 +24,7 @@ import { internalLinking } from "./handlers/internal-linking.js";
 import { redirectMap } from "./handlers/redirect-map.js";
 import { wireframeGenerate } from "./handlers/wireframe-generate.js";
 import { wpIntake } from "./handlers/wp-intake.js";
+import { imageHarvest } from "./handlers/image-harvest.js";
 
 const HANDLERS: Record<string, JobHandler> = {
   site_scrape: siteScrape,
@@ -37,6 +38,7 @@ const HANDLERS: Record<string, JobHandler> = {
   redirect_map: redirectMap,
   wireframe_generate: wireframeGenerate,
   wp_intake: wpIntake,
+  image_harvest: imageHarvest,
 };
 
 const connection = new Redis(env.redisUrl, { maxRetriesPerRequest: null, enableReadyCheck: false });

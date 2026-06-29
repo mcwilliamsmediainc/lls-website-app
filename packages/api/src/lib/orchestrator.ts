@@ -175,6 +175,37 @@ export async function chainSchemaForPage(
  * internal_linking and redirect_map — but only once. No-op if not all approved
  * or a linking pass is already queued/running/completed. Never throws.
  */
+/**
+ * Queue image_harvest once intake imagery is ready to pull, i.e. right after a
+ * wp_intake (managed) or site_scrape (external) job completes. Idempotent: no-op
+ * if an image_harvest for this client is already queued/running/completed. Never
+ * throws — chaining must not break the job-update callback that triggers it.
+ */
+export async function chainImageHarvest(
+  clientId: number,
+  clientSlug: string,
+  queuedBy?: number | null
+): Promise<void> {
+  try {
+    const existing = await db
+      .select({ id: jobs.id })
+      .from(jobs)
+      .where(
+        and(
+          eq(jobs.clientId, clientId),
+          eq(jobs.taskType, "image_harvest"),
+          inArray(jobs.status, ["queued", "running", "completed"])
+        )
+      )
+      .limit(1);
+    if (existing.length) return;
+
+    await enqueueClientJob({ clientId, clientSlug, taskType: "image_harvest", params: {}, queuedBy });
+  } catch (err) {
+    console.error(`[orchestrator] chainImageHarvest failed for ${clientSlug}:`, err);
+  }
+}
+
 export async function chainLinkingAndRedirect(
   clientId: number,
   clientSlug: string,

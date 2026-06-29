@@ -13,6 +13,7 @@ import {
   checklistItems,
   contentPages,
   llsBrainInjectionResponses,
+  photos,
   type ClientStage,
 } from "../lib/db.js";
 import { requireAuth } from "../middleware/auth.js";
@@ -443,17 +444,78 @@ clientsRouter.get(
   })
 );
 
-/** Worker callback: write a generated file to the client workspace (spec Table 10). */
+/**
+ * Worker callback: write a generated file to the client workspace (spec Table 10).
+ * Text files are sent as a UTF-8 string; binary files (e.g. harvested images) are
+ * sent base64-encoded with `encoding: "base64"` and decoded back to bytes here.
+ */
 clientsRouter.post(
   "/:slug/files",
   requireWorker,
   asyncHandler(async (req, res) => {
-    const { filename, content, contentType } = z
-      .object({ filename: z.string().min(1), content: z.string(), contentType: z.string().optional() })
+    const { filename, content, contentType, encoding } = z
+      .object({
+        filename: z.string().min(1),
+        content: z.string(),
+        contentType: z.string().optional(),
+        encoding: z.enum(["utf8", "base64"]).default("utf8"),
+      })
       .parse(req.body);
     const key = workspaceKey(req.params.slug, filename);
-    await putFile(key, content, contentType ?? "text/markdown");
+    const body = encoding === "base64" ? Buffer.from(content, "base64") : content;
+    await putFile(key, body, contentType ?? "text/markdown");
     res.json({ ok: true, key });
+  })
+);
+
+/**
+ * Worker callback: register a harvested/generated photo record (image_harvest
+ * handler). Mirrors the authenticated photo-register route but is worker-authed
+ * and drives the Photo Manager image hierarchy. Distinct path from the
+ * authenticated POST /:slug/photos (photosRouter) so worker auth does not shadow
+ * the team-facing register endpoint.
+ */
+clientsRouter.post(
+  "/:slug/photos/harvest",
+  requireWorker,
+  asyncHandler(async (req, res) => {
+    const body = z
+      .object({
+        filename: z.string().min(1),
+        source: z.enum(["client", "gbp", "ai_generated", "licensed_stock"]).default("client"),
+        zoneType: z.string().optional(),
+        pageAssigned: z.string().optional(),
+        altText: z.string().optional(),
+        generationMetadata: z.record(z.unknown()).optional(),
+      })
+      .parse(req.body);
+    const client = await getClientBySlug(req.params.slug);
+    if (!client) throw new HttpError(404, "Client not found");
+
+    // Idempotent on re-run: skip if a non-deleted photo with this filename exists.
+    const dupe = await db
+      .select({ id: photos.id })
+      .from(photos)
+      .where(and(eq(photos.clientId, client.id), eq(photos.filename, body.filename), isNull(photos.deletedAt)))
+      .limit(1);
+    if (dupe.length) {
+      res.json({ ok: true, id: dupe[0]!.id, deduped: true });
+      return;
+    }
+
+    const [photo] = await db
+      .insert(photos)
+      .values({
+        clientId: client.id,
+        filename: body.filename,
+        source: body.source,
+        zoneType: body.zoneType,
+        pageAssigned: body.pageAssigned,
+        altText: body.altText,
+        generationMetadata: body.generationMetadata ?? {},
+      })
+      .returning();
+    res.status(201).json({ ok: true, id: photo!.id });
   })
 );
 

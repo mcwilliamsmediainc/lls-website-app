@@ -19,6 +19,7 @@ export const JOB_TYPES = [
   "wireframe_generate",
   "url_inventory",
   "wp_intake",
+  "image_harvest",
 ] as const;
 
 export type JobType = (typeof JOB_TYPES)[number];
