@@ -49,15 +49,16 @@ const ALL_ROLES: TeamRole[] = [
 const PUSH_TO_LIVE_BUILD_OVERRIDE = true;
 
 /**
- * ⚠ GLOBAL OVERRIDE — grants every role EVERY permission.
- * Enabled 2026-06-23 by explicit owner request. When true this BYPASSES the
- * entire role × feature matrix below, including push_to_live (live WordPress),
- * delete_client, bypass_style_gate, rollback_deployment, and edit_team_members,
- * and also grants full audit-log read to everyone.
- * The MATRIX below is preserved intact: set this back to false to restore the
- * spec v5.3 Table 28 behavior exactly.
+ * ⚠ GLOBAL OVERRIDE — when true, grants every role EVERY permission.
+ * Enabled 2026-06-23 for internal testing; disabled 2026-06-30 once the Team
+ * Admin UI and other role-gated features went live, restoring spec v5.3 Table 28
+ * enforcement. When true this BYPASSES the entire role × feature matrix below,
+ * including push_to_live (live WordPress), delete_client, bypass_style_gate,
+ * rollback_deployment, and edit_team_members, and grants full audit-log read to
+ * everyone. The MATRIX below is the source of truth: set this true only to
+ * temporarily reopen everything again.
  */
-const ALLOW_ALL_PERMISSIONS = true;
+const ALLOW_ALL_PERMISSIONS = false;
 
 const MATRIX: Record<Permission, TeamRole[]> = {
   add_edit_client: ["matt", "tiffany", "elise", "penn", "tyler"],
