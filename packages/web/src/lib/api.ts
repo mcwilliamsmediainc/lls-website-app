@@ -127,7 +127,18 @@ export interface TeamMember {
   username: string;
   email: string;
   active: boolean;
-  hasTotp: boolean;
+  createdAt: string;
+}
+
+/** Create response: the new member plus the one-time temporary password. */
+export interface TeamMemberWithPassword extends TeamMember {
+  tempPassword: string;
+}
+
+/** Reset-password response: the one-time temporary password. */
+export interface PasswordResetResult {
+  username: string;
+  tempPassword: string;
 }
 
 export const TEAM_ROLES = [
