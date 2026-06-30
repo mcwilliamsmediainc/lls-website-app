@@ -7,6 +7,7 @@ only the page content.
 - Client facts: {client_facts}
 - Global style rules: {style_rules}
 - Vertical config: {vertical_config}
+- Layout reference (approved mockup), when present follow its section order, content hierarchy, and component structure: {mockup_reference}
 - Reading level target (Flesch-Kincaid grade): {reading_level_target}
 - Word count target: {word_count_target}
 

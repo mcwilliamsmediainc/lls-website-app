@@ -5,6 +5,7 @@ import { KanbanCard } from "../components/KanbanCard";
 
 const STAGES: { key: Stage; label: string }[] = [
   { key: "intake", label: "Intake" },
+  { key: "mockup", label: "Mockup" },
   { key: "content", label: "Content" },
   { key: "review", label: "Review" },
   { key: "live", label: "Live" },
@@ -39,7 +40,7 @@ export function Pipeline() {
       {loading ? (
         <p className="text-slate">Loading…</p>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           {STAGES.map((s) => {
             const cards = clients.filter((c) => c.stage === s.key);
             return (

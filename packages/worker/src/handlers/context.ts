@@ -11,7 +11,16 @@ export interface JobContext {
   styleRules: string;
   verticalConfig: string;
   kb: KbContext;
+  /** Layout reference extracted from the approved mockup (generate_page only). */
+  mockupReference: string;
 }
+
+export interface BuildContextOptions {
+  /** Fetch the approved mockup as a layout reference (generate_page). */
+  includeMockup?: boolean;
+}
+
+const NO_MOCKUP = "No design mockup is on file for this client. Use the standard page structure from the vertical config.";
 
 const STYLE_RULES_FALLBACK = `Global Style Rules (fallback summary):
 - No em dashes. No exclamation points in body copy.
@@ -35,15 +44,36 @@ function verticalConfigFallback(vertical: string): string {
  * and pulls Global Style Rules + vertical config from the KB cache. Applies the
  * KB staleness policy (throws KbStaleError when cache is >24h and Drive is down).
  */
-export async function buildContext(clientSlug: string, vertical: string): Promise<JobContext> {
+export async function buildContext(
+  clientSlug: string,
+  vertical: string,
+  opts: BuildContextOptions = {}
+): Promise<JobContext> {
   const kb = getKbContext(); // may throw KbStaleError -> caller holds the job
   const facts = await api.getClientFacts(clientSlug);
   const styleRules = kbDoc("L40-Global-Style-Rules.md") || STYLE_RULES_FALLBACK;
   const verticalDoc = kbDoc(`${vertical.replace(/_/g, "-")}-config.md`) || verticalConfigFallback(vertical);
+
+  let mockupReference = NO_MOCKUP;
+  if (opts.includeMockup) {
+    try {
+      const m = await api.getMockup(clientSlug);
+      if (m.hasMockup && m.content) {
+        mockupReference = m.isText
+          ? `Approved design mockup (match this layout: section order, content hierarchy, and component structure):\n${m.content}`
+          : m.content;
+      }
+    } catch {
+      // Mockup is a layout aid, not a hard input; fall back to the standard structure.
+      mockupReference = NO_MOCKUP;
+    }
+  }
+
   return {
     clientFacts: facts.clientFacts || "[client-facts.md is empty]",
     styleRules,
     verticalConfig: verticalDoc,
     kb,
+    mockupReference,
   };
 }

@@ -24,7 +24,12 @@ export const STAGE_CHECKLISTS: Record<ClientStage, ChecklistTemplateItem[]> = {
     { itemName: "client-facts.md reviewed by Elise", assigneeHint: "elise" },
     { itemName: "Brain Injection submitted by client" },
     { itemName: "Brain Injection reviewed by team" },
-    { itemName: "Intake approved — move to Content" },
+    { itemName: "Intake approved — move to Mockup" },
+  ],
+  mockup: [
+    { itemName: "Mockup uploaded" },
+    { itemName: "Mockup reviewed by team" },
+    { itemName: "Mockup approved by client" },
   ],
   content: [
     { itemName: "Home page generated" },

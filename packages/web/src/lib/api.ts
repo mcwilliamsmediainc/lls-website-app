@@ -57,7 +57,7 @@ export interface AuthResponse {
   permissions: Record<Permission, boolean>;
 }
 
-export type Stage = "intake" | "content" | "review" | "live";
+export type Stage = "intake" | "mockup" | "content" | "review" | "live";
 
 export interface Client {
   id: number;
@@ -71,6 +71,8 @@ export interface Client {
   notes: string | null;
   rankMapVerdict: string | null;
   phaseUnlocked: number;
+  mockupApproved: boolean;
+  mockupFilePath: string | null;
   createdAt: string;
 }
 

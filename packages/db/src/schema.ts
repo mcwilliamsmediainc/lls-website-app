@@ -43,9 +43,12 @@ export const teamRoleEnum = pgEnum("team_role", [
   "lindsay",
 ]);
 
-/** Pipeline stages (kanban columns). Wireframe deferred to Phase 4. */
+/** Pipeline stages (kanban columns). Wireframe deferred to Phase 4.
+ * Mockup sits between Intake and Content: a design mockup is uploaded, reviewed
+ * by the team, and approved by the client before any page content is generated. */
 export const clientStageEnum = pgEnum("client_stage", [
   "intake",
+  "mockup",
   "content",
   "review",
   "live",
@@ -206,6 +209,12 @@ export const clients = pgTable(
     serverHost: text("server_host"),
     serverUser: text("server_user"),
     serverPath: text("server_path"),
+    /** Mockup stage: client sign-off gate. The "Start Content Build" action and
+     * generate_page jobs are blocked until the uploaded mockup is approved. */
+    mockupApproved: boolean("mockup_approved").notNull().default(false),
+    /** Workspace key of the uploaded design mockup (HTML or image) under
+     * workspace/<slug>/mockups/. Injected into generate_page as a layout reference. */
+    mockupFilePath: text("mockup_file_path"),
     /** Free-form team notes: intake context, client requests, anything not in client-facts.md. */
     notes: text("notes"),
     /** Local 40 Phase 2/3 are rank-map gated. Verdict surfaced to the team. */

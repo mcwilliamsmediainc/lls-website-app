@@ -189,7 +189,7 @@ clientsRouter.patch(
 );
 
 const stageSchema = z.object({
-  stage: z.enum(["intake", "content", "review", "live"]),
+  stage: z.enum(["intake", "mockup", "content", "review", "live"]),
   serviceAreas: z.array(z.string()).default([]),
   primaryServices: z.array(z.string()).default([]),
 });
@@ -259,6 +259,11 @@ clientsRouter.post(
       throw new HttpError(409, "Client must be in the Content stage to start a content build");
     }
 
+    // Mockup gate: the design mockup must be approved before any page is generated.
+    if (!client.mockupApproved) {
+      throw new HttpError(409, "Cannot start content build: the mockup has not been approved");
+    }
+
     const intake = await db
       .select()
       .from(checklistItems)
@@ -321,6 +326,186 @@ clientsRouter.post(
     });
 
     res.status(201).json({ ok: true, pages: plan.length, services, serviceAreas, queued });
+  })
+);
+
+/* ---- mockup stage (upload / approve / worker read) ---- */
+
+const MOCKUP_ALLOWED = /\.(html?|png|jpe?g|webp|gif|svg|pdf)$/i;
+
+/** Map a mockup filename to a sensible content type for storage + display. */
+function mockupContentType(filename: string): string {
+  const ext = filename.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1] ?? "";
+  const map: Record<string, string> = {
+    html: "text/html",
+    htm: "text/html",
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    webp: "image/webp",
+    gif: "image/gif",
+    svg: "image/svg+xml",
+    pdf: "application/pdf",
+  };
+  return map[ext] ?? "application/octet-stream";
+}
+
+const mockupUploadSchema = z.object({
+  filename: z.string().min(1),
+  content: z.string(),
+  /** utf8 for HTML/SVG text; base64 for binary images / PDFs. */
+  encoding: z.enum(["utf8", "base64"]).default("base64"),
+  contentType: z.string().optional(),
+});
+
+/**
+ * Upload (or replace) the design mockup for a client. Stores the file under
+ * workspace/<slug>/mockups/ and records it on the client. A new upload resets
+ * the approval flag — a replaced mockup must be re-approved before content can be
+ * built. Marks the "Mockup uploaded" checklist item complete when present.
+ */
+clientsRouter.post(
+  "/:slug/mockup",
+  requireAuth,
+  requirePermission("add_edit_client"),
+  asyncHandler(async (req, res) => {
+    const client = await getClientBySlug(req.params.slug);
+    if (!client) throw new HttpError(404, "Client not found");
+    const auth = req.auth!;
+    const body = mockupUploadSchema.parse(req.body);
+
+    // Reject path traversal: store by basename only.
+    const filename = body.filename.replace(/^.*[\\/]/, "");
+    if (!MOCKUP_ALLOWED.test(filename)) {
+      throw new HttpError(422, "Mockup must be an HTML, image (png/jpg/webp/gif/svg), or PDF file");
+    }
+
+    const key = workspaceKey(client.slug, `mockups/${filename}`);
+    const data = body.encoding === "base64" ? Buffer.from(body.content, "base64") : body.content;
+    await putFile(key, data, body.contentType ?? mockupContentType(filename));
+
+    const [updated] = await db
+      .update(clients)
+      .set({ mockupFilePath: key, mockupApproved: false })
+      .where(eq(clients.id, client.id))
+      .returning();
+
+    // Best-effort: mark the upload checklist item complete.
+    await db
+      .update(checklistItems)
+      .set({ status: "complete", completedAt: new Date() })
+      .where(
+        and(
+          eq(checklistItems.clientId, client.id),
+          eq(checklistItems.stage, "mockup"),
+          eq(checklistItems.itemName, "Mockup uploaded")
+        )
+      );
+
+    await writeAudit({
+      actorId: auth.sub,
+      actorRole: auth.role,
+      action: "upload_mockup",
+      entityType: "client",
+      entityId: client.id,
+      newValue: { mockupFilePath: key },
+      ipAddress: req.ip ?? null,
+    });
+
+    res.status(201).json({ ok: true, client: updated, key });
+  })
+);
+
+const mockupApproveSchema = z.object({ approved: z.boolean().default(true) });
+
+/** Approve (or un-approve) the uploaded mockup. Approval is the gate for the
+ * content build. Requires a mockup to have been uploaded first. */
+clientsRouter.post(
+  "/:slug/mockup/approve",
+  requireAuth,
+  requirePermission("approve_content"),
+  asyncHandler(async (req, res) => {
+    const client = await getClientBySlug(req.params.slug);
+    if (!client) throw new HttpError(404, "Client not found");
+    const auth = req.auth!;
+    const { approved } = mockupApproveSchema.parse(req.body ?? {});
+
+    if (approved && !client.mockupFilePath) {
+      throw new HttpError(409, "Cannot approve: no mockup has been uploaded");
+    }
+
+    const [updated] = await db
+      .update(clients)
+      .set({ mockupApproved: approved })
+      .where(eq(clients.id, client.id))
+      .returning();
+
+    if (approved) {
+      await db
+        .update(checklistItems)
+        .set({ status: "complete", completedAt: new Date() })
+        .where(
+          and(
+            eq(checklistItems.clientId, client.id),
+            eq(checklistItems.stage, "mockup"),
+            eq(checklistItems.itemName, "Mockup approved by client")
+          )
+        );
+    }
+
+    await writeAudit({
+      actorId: auth.sub,
+      actorRole: auth.role,
+      action: approved ? "approve_mockup" : "unapprove_mockup",
+      entityType: "client",
+      entityId: client.id,
+      newValue: { mockupApproved: approved },
+      ipAddress: req.ip ?? null,
+    });
+
+    res.json({ ok: true, client: updated });
+  })
+);
+
+/**
+ * Worker read: the mockup as a layout reference for generate_page. Returns the
+ * extracted text for HTML/SVG mockups, or a structured description for binary
+ * (image/PDF) mockups that cannot be inlined as text.
+ */
+clientsRouter.get(
+  "/:slug/mockup/content",
+  requireWorker,
+  asyncHandler(async (req, res) => {
+    const client = await getClientBySlug(req.params.slug);
+    if (!client) throw new HttpError(404, "Client not found");
+
+    if (!client.mockupFilePath) {
+      res.json({ hasMockup: false, approved: false, isText: false, content: "" });
+      return;
+    }
+
+    const filename = client.mockupFilePath.replace(/^.*\//, "");
+    const isText = /\.(html?|svg)$/i.test(filename);
+    let content = "";
+    if (isText) {
+      try {
+        const raw = await getFileText(client.mockupFilePath);
+        // Cap to keep the prompt within budget; the layout structure is in the markup.
+        content = raw.length > 16000 ? `${raw.slice(0, 16000)}\n<!-- mockup truncated -->` : raw;
+      } catch {
+        content = "";
+      }
+    } else {
+      content = `Binary design mockup on file: ${filename}. Use it as the visual layout reference: match the section order, content hierarchy, and component structure the design implies.`;
+    }
+
+    res.json({
+      hasMockup: true,
+      approved: client.mockupApproved,
+      filePath: client.mockupFilePath,
+      isText,
+      content,
+    });
   })
 );
 

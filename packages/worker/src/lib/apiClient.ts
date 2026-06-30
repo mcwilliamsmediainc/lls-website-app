@@ -89,6 +89,13 @@ export const api = {
   getClientFacts: (slug: string) =>
     get<{ slug: string; clientFacts: string }>(`/api/clients/${slug}/facts`),
 
+  /** Read the approved design mockup as a layout reference for generate_page.
+   * Returns extracted text for HTML/SVG mockups, or a description for binary ones. */
+  getMockup: (slug: string) =>
+    get<{ hasMockup: boolean; approved: boolean; filePath?: string; isText: boolean; content: string }>(
+      `/api/clients/${slug}/mockup/content`
+    ),
+
   getPages: (slug: string) =>
     get<Array<{ slug: string; content: string }>>(`/api/clients/${slug}/pages`),
 

@@ -55,8 +55,9 @@ export const generatePage: JobHandler = async (payload): Promise<HandlerResult> 
   }
 
   const vertical = await getClientVertical(payload.clientId);
-  const ctx = await buildContext(payload.clientSlug, vertical);
+  const ctx = await buildContext(payload.clientSlug, vertical, { includeMockup: true });
   log.push(`Context built (vertical=${vertical}, kb age ${ctx.kb.ageMinutes}m${ctx.kb.stale ? ", STALE" : ""})`);
+  log.push(ctx.mockupReference.startsWith("No design mockup") ? "Mockup: none on file" : "Mockup: injected as layout reference");
 
   const targets = loadWordCountTargets();
   const wcTarget = targets[pageType] ?? targets.service!;
@@ -70,6 +71,7 @@ export const generatePage: JobHandler = async (payload): Promise<HandlerResult> 
     client_facts: ctx.clientFacts,
     style_rules: ctx.styleRules,
     vertical_config: ctx.verticalConfig,
+    mockup_reference: ctx.mockupReference,
     reading_level_target: readingBand ? `${readingBand.min}-${readingBand.max}` : "default",
     word_count_target: `${wcTarget.min}-${wcTarget.max}`,
     service,
