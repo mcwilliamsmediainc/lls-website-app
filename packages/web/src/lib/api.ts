@@ -142,7 +142,7 @@ export interface PasswordResetResult {
 }
 
 export const TEAM_ROLES = [
-  "matt", "tiffany", "elise", "chloe", "penn", "rachelle", "clarence", "tyler", "lindsay",
+  "matt", "tiffany", "elise", "chloe", "penn", "rachelle", "clarence", "tyler", "lindsay", "c",
 ] as const;
 
 export interface WorkerHealth {

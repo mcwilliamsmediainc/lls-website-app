@@ -36,6 +36,12 @@ export const env = {
   /** When true, accounts without a provisioned TOTP secret cannot obtain a
    * fully authenticated session. Off for internal testing, on before launch. */
   mfaRequired: optional("MFA_REQUIRED", "false") === "true",
+  /** Off by default: a completed wp_intake only auto-chains wp_theme_deploy when
+   * AUTO_DEPLOY_THEME=true. Kept off until config.php is derived per client — the
+   * master theme currently ships a Truskett-specific config.php, so auto-deploying
+   * it to other managed clients would push Truskett's identity to their sites.
+   * Queue wp_theme_deploy manually per client (after its config.php is set). */
+  autoDeployTheme: optional("AUTO_DEPLOY_THEME", "false") === "true",
   /** Shared secret the worker presents on internal callback routes. */
   workerToken: optional("WORKER_API_TOKEN", ""),
   /** Bearer token an external monitoring service presents to GET /api/status.

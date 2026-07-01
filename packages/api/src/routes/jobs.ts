@@ -13,8 +13,9 @@ import { requireWorker } from "../middleware/worker.js";
 import { jobDispatchLimiter } from "../middleware/rateLimit.js";
 import { asyncHandler, HttpError } from "../middleware/error.js";
 import { enqueueJob, isJobType } from "../lib/queue.js";
-import { chainImageHarvest } from "../lib/orchestrator.js";
+import { chainImageHarvest, chainThemeDeploy } from "../lib/orchestrator.js";
 import { writeAudit } from "../lib/audit.js";
+import { env } from "../lib/env.js";
 
 export const jobsRouter = Router();
 
@@ -163,7 +164,16 @@ jobsRouter.post(
         .from(clients)
         .where(eq(clients.id, existing.clientId))
         .limit(1);
-      if (client) await chainImageHarvest(existing.clientId, client.slug, existing.queuedBy);
+      if (client) {
+        await chainImageHarvest(existing.clientId, client.slug, existing.queuedBy);
+        // New managed-hosting clients are put onto the lls-local-40 master theme
+        // automatically (config-only per client) rather than a bespoke build.
+        // wp_intake implies managed hosting, so the SSH access wp_theme_deploy needs
+        // is present. Toggle with AUTO_DEPLOY_THEME.
+        if (existing.taskType === "wp_intake" && env.autoDeployTheme) {
+          await chainThemeDeploy(existing.clientId, client.slug, existing.queuedBy);
+        }
+      }
     }
 
     res.json(updated);

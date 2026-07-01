@@ -19,6 +19,7 @@ export const JOB_TYPES = [
   "wireframe_generate",
   "url_inventory",
   "wp_intake",
+  "wp_theme_deploy",
   "image_harvest",
   "wp_image_assign",
 ] as const;

@@ -45,6 +45,15 @@ export const env = {
    */
   wpCli: optional("WP_CLI_BIN", "wp"),
 
+  /** Slug of the reusable master theme deployed to client sites (wp_theme_deploy). */
+  masterThemeSlug: optional("MASTER_THEME_SLUG", "lls-local-40"),
+  /**
+   * Filesystem path to the master theme source that wp_theme_deploy uploads.
+   * Empty -> defaults to <cwd>/wordpress-themes/<masterThemeSlug> (the repo copy
+   * baked into the worker image at build time).
+   */
+  themeSrcDir: optional("THEME_SRC_DIR", ""),
+
   googleDriveKbFolderId: optional("GOOGLE_DRIVE_KB_FOLDER_ID", ""),
   googleDriveOauthToken: optional("GOOGLE_DRIVE_OAUTH_TOKEN", ""),
   googleDriveMcpUrl: optional("GOOGLE_DRIVE_MCP_URL", "https://drivemcp.googleapis.com/mcp/v1"),
