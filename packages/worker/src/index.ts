@@ -24,6 +24,7 @@ import { internalLinking } from "./handlers/internal-linking.js";
 import { redirectMap } from "./handlers/redirect-map.js";
 import { wireframeGenerate } from "./handlers/wireframe-generate.js";
 import { wpIntake } from "./handlers/wp-intake.js";
+import { wpThemeDeploy } from "./handlers/wp-theme-deploy.js";
 import { imageHarvest } from "./handlers/image-harvest.js";
 import { wpImageAssign } from "./handlers/wp-image-assign.js";
 
@@ -39,6 +40,7 @@ const HANDLERS: Record<string, JobHandler> = {
   redirect_map: redirectMap,
   wireframe_generate: wireframeGenerate,
   wp_intake: wpIntake,
+  wp_theme_deploy: wpThemeDeploy,
   image_harvest: imageHarvest,
   wp_image_assign: wpImageAssign,
 };

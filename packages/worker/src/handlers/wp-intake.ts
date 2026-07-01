@@ -7,6 +7,12 @@
  * a raw wp-data.json to the workspace. Trigger: clients with managed_hosting=true,
  * queued as a wp_intake job.
  *
+ * Theme model: intake only READS the client's existing site; it never builds a
+ * bespoke theme. Every Local 40 site runs the shared master theme (lls-local-40),
+ * which is installed + activated by the separate `wp_theme_deploy` handler and
+ * reskinned per client via its config.php alone. Queue wp_theme_deploy after
+ * intake to put the site on the master theme.
+ *
  * SSH access model (per spec): per-client SSH keys use the Plesk subscription user,
  * never root. One key per client subscription, scoped to that site's files only. The
  * connection authenticates as the username stored on the client record (server_user),
