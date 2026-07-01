@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   api,
+  ApiError,
   type TeamMember,
   type TeamMemberWithPassword,
   type PasswordResetResult,
@@ -46,6 +47,7 @@ export function Settings() {
             <p className="text-sm text-slate">
               Signed in as <strong>{user?.name}</strong> ({user?.role}).
             </p>
+            <MfaSection />
           </Section>
 
           <Section title="Knowledge Base">
@@ -75,6 +77,141 @@ export function Settings() {
         <Section title="Team">
           <TeamAdmin isAdmin={user?.role === "matt" || user?.role === "tyler"} />
         </Section>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Two-factor authentication (TOTP) enrollment. Shown in the Account section.
+ * Not enrolled: generate a secret + QR, enter a code, verify to enable.
+ * Enrolled: show an active badge and allow removing MFA (self-service).
+ */
+function MfaSection() {
+  const [enrolled, setEnrolled] = useState<boolean | null>(null);
+  const [setup, setSetup] = useState<{ otpauthUrl: string; qrDataUrl: string; secret: string } | null>(null);
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    api
+      .get<{ enrolled: boolean }>("/api/auth/totp")
+      .then((r) => setEnrolled(r.enrolled))
+      .catch(() => setEnrolled(false));
+  }, []);
+
+  async function startSetup() {
+    setError(null);
+    setBusy(true);
+    try {
+      const r = await api.get<{ otpauthUrl: string; qrDataUrl: string; secret: string }>("/api/auth/totp/setup");
+      setSetup(r);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Could not start MFA setup");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function verify() {
+    setError(null);
+    setBusy(true);
+    try {
+      await api.post<{ enrolled: boolean }>("/api/auth/totp/verify", { token: code.trim() });
+      setEnrolled(true);
+      setSetup(null);
+      setCode("");
+      setDone(true);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Verification failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove() {
+    setError(null);
+    setBusy(true);
+    try {
+      await api.del("/api/auth/totp");
+      setEnrolled(false);
+      setDone(false);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Could not remove MFA");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (enrolled === null) {
+    return <p className="mt-3 text-sm text-slate/60">Checking two-factor status…</p>;
+  }
+
+  return (
+    <div className="mt-4 border-t border-sand pt-4">
+      <h4 className="text-sm font-bold text-navy mb-2">Two-factor authentication</h4>
+      {error && <div className="mb-2 rounded bg-red-50 text-red-700 text-sm px-3 py-2">{error}</div>}
+
+      {enrolled ? (
+        <div className="space-y-3">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold px-3 py-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> MFA is active
+          </span>
+          <div>
+            <button
+              onClick={remove}
+              disabled={busy}
+              className="rounded border border-rust px-3 py-1.5 text-sm font-semibold text-rust disabled:opacity-50"
+            >
+              {busy ? "Removing…" : "Remove MFA"}
+            </button>
+          </div>
+        </div>
+      ) : done ? (
+        <div className="rounded bg-emerald-50 text-emerald-700 text-sm px-3 py-2">
+          MFA enabled. You will be asked for a code on your next login.
+        </div>
+      ) : !setup ? (
+        <div>
+          <p className="text-sm text-slate mb-2">
+            Set up two-factor authentication with an authenticator app (Google Authenticator, 1Password, Authy).
+          </p>
+          <button
+            onClick={startSetup}
+            disabled={busy}
+            className="rounded bg-navy px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+          >
+            {busy ? "Generating…" : "Enable MFA"}
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <p className="text-sm text-slate">
+            Scan this QR code with your authenticator app, then enter the 6-digit code it shows.
+          </p>
+          <img src={setup.qrDataUrl} alt="TOTP QR code" className="h-44 w-44 rounded border border-sand bg-white p-2" />
+          <p className="text-[11px] text-slate/60 break-all">
+            Can’t scan? Enter this secret manually: <code className="font-mono">{setup.secret}</code>
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              inputMode="numeric"
+              placeholder="123456"
+              className="w-32 rounded border border-sand p-2 text-sm tracking-widest"
+            />
+            <button
+              onClick={verify}
+              disabled={busy || code.trim().length < 6}
+              className="rounded bg-navy px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              {busy ? "Verifying…" : "Verify and Enable"}
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

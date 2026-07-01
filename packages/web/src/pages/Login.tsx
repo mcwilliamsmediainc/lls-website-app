@@ -4,12 +4,14 @@ import { useAuth } from "../lib/auth";
 import { ApiError } from "../lib/api";
 
 export function Login() {
-  const { login, user } = useAuth();
+  const { login, completeMfaLogin, user } = useAuth();
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [token, setToken] = useState("");
   const [needsMfa, setNeedsMfa] = useState(false);
+  // Set when the server issues a two-step partial token (MFA_REQUIRED enrolled user).
+  const [partialToken, setPartialToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -22,10 +24,23 @@ export function Login() {
     setError(null);
     setBusy(true);
     try {
-      await login(username, password, token || undefined);
+      if (partialToken) {
+        // Second step of the two-step MFA login.
+        await completeMfaLogin(partialToken, token);
+        navigate("/");
+        return;
+      }
+      const result = await login(username, password, token || undefined);
+      if (result.mfaRequired) {
+        setPartialToken(result.partialToken ?? null);
+        setNeedsMfa(true);
+        setError("Enter your authenticator code to continue.");
+        return;
+      }
       navigate("/");
     } catch (err) {
       if (err instanceof ApiError && /mfa/i.test(err.message)) {
+        // MFA-off enrolled user: code is supplied inline on the same call.
         setNeedsMfa(true);
         setError("Enter your authenticator code to continue.");
       } else {

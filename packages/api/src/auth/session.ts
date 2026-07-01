@@ -34,6 +34,61 @@ export function verifySession(token: string): SessionClaims | null {
   }
 }
 
+/* ------------------------------------------------------------------ MFA flow --
+ * Short-lived, single-purpose tokens used by the two-step login and enrollment
+ * flows. They are signed with the same secret but carry a `purpose` claim so a
+ * partial-login token can never be replayed as a full session or vice versa.
+ */
+
+export interface PartialLoginClaims {
+  sub: number;
+  username: string;
+  purpose: "mfa_partial";
+}
+
+/** Issued after a correct password when MFA is required; exchanged for a full
+ * session by POST /api/auth/totp/login once the TOTP code is verified. */
+export function issuePartialLoginToken(sub: number, username: string): string {
+  return jwt.sign({ sub, username, purpose: "mfa_partial" } satisfies PartialLoginClaims, env.authSecret, {
+    expiresIn: "5m",
+  });
+}
+
+export function verifyPartialLoginToken(token: string): PartialLoginClaims | null {
+  try {
+    const claims = jwt.verify(token, env.authSecret) as unknown as PartialLoginClaims;
+    return claims.purpose === "mfa_partial" ? claims : null;
+  } catch {
+    return null;
+  }
+}
+
+export interface PendingEnrollClaims {
+  sub: number;
+  secret: string;
+  purpose: "totp_enroll";
+}
+
+/** Holds the not-yet-saved TOTP secret between GET /totp/setup and POST
+ * /totp/verify. Carried in an httpOnly cookie so the secret never round-trips
+ * through the client on the verify call (which only sends the code). */
+export function issuePendingEnrollToken(sub: number, secret: string): string {
+  return jwt.sign({ sub, secret, purpose: "totp_enroll" } satisfies PendingEnrollClaims, env.authSecret, {
+    expiresIn: "10m",
+  });
+}
+
+export function verifyPendingEnrollToken(token: string): PendingEnrollClaims | null {
+  try {
+    const claims = jwt.verify(token, env.authSecret) as unknown as PendingEnrollClaims;
+    return claims.purpose === "totp_enroll" ? claims : null;
+  } catch {
+    return null;
+  }
+}
+
+export const PENDING_ENROLL_COOKIE = "lls_totp_pending";
+
 export function cookieOptions(): {
   httpOnly: boolean;
   secure: boolean;
