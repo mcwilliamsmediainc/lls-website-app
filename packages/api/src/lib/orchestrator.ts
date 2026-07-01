@@ -206,6 +206,40 @@ export async function chainImageHarvest(
   }
 }
 
+/**
+ * Queue wp_theme_deploy once a managed-hosting client's wp_intake completes, so
+ * every new Local 40 site is automatically put onto the shared lls-local-40 master
+ * theme (reskinned per client via config.php) instead of a bespoke per-client
+ * theme. Idempotent: no-op if a wp_theme_deploy for this client is already
+ * queued/running/completed. Never throws — chaining must not break the job-update
+ * callback that triggers it. Only chain after wp_intake (managed hosting implies
+ * the SSH access wp_theme_deploy needs).
+ */
+export async function chainThemeDeploy(
+  clientId: number,
+  clientSlug: string,
+  queuedBy?: number | null
+): Promise<void> {
+  try {
+    const existing = await db
+      .select({ id: jobs.id })
+      .from(jobs)
+      .where(
+        and(
+          eq(jobs.clientId, clientId),
+          eq(jobs.taskType, "wp_theme_deploy"),
+          inArray(jobs.status, ["queued", "running", "completed"])
+        )
+      )
+      .limit(1);
+    if (existing.length) return;
+
+    await enqueueClientJob({ clientId, clientSlug, taskType: "wp_theme_deploy", params: {}, queuedBy });
+  } catch (err) {
+    console.error(`[orchestrator] chainThemeDeploy failed for ${clientSlug}:`, err);
+  }
+}
+
 export async function chainLinkingAndRedirect(
   clientId: number,
   clientSlug: string,
