@@ -1,0 +1,90 @@
+/*
+Theme Name: LLS Local 40
+Theme URI: https://localleadstack.com
+Author: LLS Build Workspace
+Description: Reusable classic WordPress master theme for Local 40 client sites. Fully config-driven: identity, NAP, colors, vertical, services, locations, attorney and images all come from config.php, which is the only file that changes per client. Source Serif 4 display + Public Sans body; navy / sky palette with orange calls to action.
+Version: 1.0.0
+Requires at least: 6.0
+Requires PHP: 8.0
+License: GPL-2.0-or-later
+Text Domain: lls-local-40
+*/
+
+/* Component styles live in assets/theme.css; imported here so a single
+   enqueue of style.css loads the whole design system. */
+@import url("assets/theme.css");
+
+/* ============================================================
+   Design tokens — these :root defaults are overridden inline by
+   functions.php using the color + font values from config.php.
+   ============================================================ */
+:root {
+  --sky:#3FA8EF; --sky-light:#8FCBF4; --sky-pale:#DCEEFB; --mid:#1D6FB8;
+  --navy:#0B2545; --navy-2:#0E2F57; --slate:#4D4D4D; --cool:#6B7682;
+  --line:#DEE5EC; --mist:#EEF3F7; --paper:#F7FAFC; --white:#FFF; --ink:#0D0D0D;
+  --orange:#F7941D; --orange-dk:#E07E0A;
+  --font-d:"Source Serif 4",Georgia,serif;
+  --font-b:"Public Sans",-apple-system,sans-serif;
+}
+
+/* ============================================================
+   Reset / base
+   ============================================================ */
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{font-family:var(--font-b);color:var(--ink);background:var(--white);line-height:1.6;-webkit-font-smoothing:antialiased}
+.inner{max-width:1180px;margin:0 auto;padding:0 26px}
+a{color:inherit;text-decoration:none;transition:color .15s}
+img{max-width:100%;display:block;height:auto}
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;cursor:pointer;font-family:var(--font-b);font-weight:800;font-size:15px;padding:14px 24px;border-radius:11px;transition:background .2s,transform .15s,box-shadow .2s;white-space:nowrap}
+.btn:active{transform:translateY(1px)}
+.btn-orange{background:var(--orange);color:var(--navy);box-shadow:0 10px 24px -12px rgba(247,148,29,.8)}
+.btn-orange:hover{background:var(--orange-dk);color:var(--navy)}
+.btn-sky{background:var(--sky);color:var(--navy)}.btn-sky:hover{background:#5cb6f2;color:var(--navy)}
+.btn-navy{background:var(--navy);color:#fff}.btn-navy:hover{background:#123461;color:#fff}
+.btn-ghost{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.4)}.btn-ghost:hover{background:rgba(255,255,255,.08);color:#fff}
+.btn-ghost-d{background:transparent;color:var(--navy);border:1.5px solid var(--line)}.btn-ghost-d:hover{border-color:var(--sky);color:var(--navy)}
+.btn-block{width:100%}
+
+/* ============================================================
+   Section scaffolding
+   ============================================================ */
+section.band{padding:64px 0}
+section.band.tight{padding:42px 0}
+.mist{background:var(--mist);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.khead{font-size:12px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:var(--mid);margin-bottom:10px}
+h2.sec{font-family:var(--font-d);font-weight:600;font-size:34px;line-height:1.12;letter-spacing:-.6px;color:var(--navy);margin-bottom:12px}
+h3.sub{font-family:var(--font-d);font-weight:600;font-size:21px;color:var(--navy);margin:26px 0 8px}
+.lead-p{font-size:16px;color:var(--slate);max-width:62ch}
+
+/* Prose (WP the_content) */
+.prose p{font-size:15.5px;color:var(--slate);margin-bottom:14px;max-width:66ch}
+.prose h2{font-family:var(--font-d);font-weight:600;font-size:27px;color:var(--navy);letter-spacing:-.4px;margin:30px 0 10px}
+.prose h3{font-family:var(--font-d);font-weight:600;font-size:21px;color:var(--navy);margin:26px 0 8px}
+.prose ul{margin:0 0 16px 0;padding-left:0;list-style:none;max-width:66ch}
+.prose ol{margin:0 0 16px 0;padding-left:22px;max-width:66ch}
+.prose li{font-size:15px;color:var(--slate);margin-bottom:9px}
+.prose ul li{padding-left:22px;position:relative;list-style:none}
+.prose ul li::before{content:"";position:absolute;left:0;top:9px;width:8px;height:8px;border-radius:2px;background:var(--orange)}
+.prose a{color:var(--mid);font-weight:600;text-decoration:underline;text-underline-offset:2px}
+.prose strong{color:var(--navy)}
+.prose img{border-radius:13px;margin:18px 0}
+
+/* ============================================================
+   Accessibility / WordPress essentials
+   ============================================================ */
+.skip-link{position:absolute;left:-9999px;top:0;background:#fff;color:var(--navy);padding:10px 16px;z-index:200;border-radius:0 0 9px 0}
+.skip-link:focus{left:0}
+.screen-reader-text{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);word-wrap:normal}
+.alignleft{float:left;margin:6px 22px 14px 0}
+.alignright{float:right;margin:6px 0 14px 22px}
+.aligncenter{margin-left:auto;margin-right:auto}
+.wp-caption{max-width:100%}
+.wp-caption-text{font-size:12.5px;color:var(--cool);margin-top:6px}
+.posts-navigation,.pagination{margin-top:28px;display:flex;gap:12px;flex-wrap:wrap}
+.posts-navigation a,.pagination a,.page-numbers{padding:8px 14px;border:1px solid var(--line);border-radius:9px;font-weight:700;font-size:14px;color:var(--navy)}
+.page-numbers.current{background:var(--navy);color:#fff;border-color:var(--navy)}
