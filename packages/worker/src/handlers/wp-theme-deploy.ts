@@ -18,13 +18,15 @@
  *  - WP-CLI not usable on host        -> needs_review (theme uploaded, not activated)
  */
 
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, posix } from "node:path";
 import { Client } from "ssh2";
 import type { ConnectConfig, SFTPWrapper } from "ssh2";
 import { api } from "../lib/apiClient.js";
-import { getClientRow } from "../lib/db.js";
+import { getClientRow, getAssignedPhotos, getBrainInjection } from "../lib/db.js";
 import { env } from "../lib/env.js";
+import { assembleThemeConfig, renderConfigPhp, configHeader } from "../lib/theme-config/index.js";
 import { type JobHandler, type HandlerResult } from "../lib/types.js";
 
 interface CmdResult {
@@ -148,6 +150,44 @@ export const wpThemeDeploy: JobHandler = async (payload): Promise<HandlerResult>
     };
   }
 
+  // Generate this client's config.php from live data (client-facts.md Tier 1,
+  // the approved mockup, and the photos table), replacing the hand-written
+  // per-client config.php. On any failure we fall back to the repo config.php so
+  // a data gap never blocks the theme deploy.
+  let genConfigPath: string | null = null;
+  try {
+    const factsRes = await api.getClientFacts(client.slug).catch(() => ({ clientFacts: "" }));
+    const mockupRes =
+      client.mockupApproved && client.mockupFilePath
+        ? await api.getMockup(client.slug).catch(() => null)
+        : null;
+    const [assignedPhotos, brain] = await Promise.all([
+      getAssignedPhotos(client.id).catch(() => []),
+      getBrainInjection(client.id).catch(() => null),
+    ]);
+    const result = assembleThemeConfig({
+      businessName: client.businessName,
+      siteType: client.siteType,
+      factsMd: factsRes.clientFacts,
+      mockup: mockupRes?.hasMockup ? { approved: mockupRes.approved, content: mockupRes.content } : null,
+      brain,
+      photos: assignedPhotos,
+    });
+    const generated = renderConfigPhp(result.config, configHeader(client.slug, result.sourced));
+    // Persist to the workspace for review/audit, then stage it for upload.
+    await api.writeFile(client.slug, "theme-config.php", generated, "text/plain").catch(() => undefined);
+    genConfigPath = join(tmpdir(), `lls-theme-config-${client.slug}.php`);
+    writeFileSync(genConfigPath, generated);
+    log.push(
+      `Generated theme-config.php (live: ${result.sourced.length} fields; base fallback: ${
+        result.fellBack.join(", ") || "none"
+      }${result.unverified.length ? `; unverified NAP: ${result.unverified.join(", ")}` : ""})`
+    );
+  } catch (err) {
+    genConfigPath = null;
+    log.push(`Config generation failed, deploying repo config.php: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
   // Load the SSH key.
   let privateKey: Buffer;
   try {
@@ -195,7 +235,9 @@ export const wpThemeDeploy: JobHandler = async (payload): Promise<HandlerResult>
       await sftpMkdir(sftp, posix.join(themeDir, d));
     }
     for (const f of themeFiles.files) {
-      await sftpPut(sftp, join(srcDir, f), posix.join(themeDir, f));
+      // Upload the generated per-client config.php in place of the repo's hardcoded one.
+      const localPath = f === "config.php" && genConfigPath ? genConfigPath : join(srcDir, f);
+      await sftpPut(sftp, localPath, posix.join(themeDir, f));
     }
     log.push(`Uploaded ${themeFiles.files.length} theme files to ${themeDir}`);
 
