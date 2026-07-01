@@ -668,6 +668,7 @@ clientsRouter.post(
       .object({
         filename: z.string().min(1),
         source: z.enum(["client", "gbp", "ai_generated", "licensed_stock"]).default("client"),
+        category: z.string().optional(),
         zoneType: z.string().optional(),
         pageAssigned: z.string().optional(),
         altText: z.string().optional(),
@@ -694,6 +695,7 @@ clientsRouter.post(
         clientId: client.id,
         filename: body.filename,
         source: body.source,
+        category: body.category,
         zoneType: body.zoneType,
         pageAssigned: body.pageAssigned,
         altText: body.altText,

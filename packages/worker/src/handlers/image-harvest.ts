@@ -533,6 +533,7 @@ export const imageHarvest: JobHandler = async (payload): Promise<HandlerResult> 
       await api.registerPhoto(slug, {
         filename: img.filename,
         source: "client",
+        category: img.category,
         zoneType: img.category,
         altText: img.altText || undefined,
         generationMetadata: {

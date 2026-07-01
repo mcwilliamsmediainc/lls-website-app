@@ -20,6 +20,7 @@ export const JOB_TYPES = [
   "url_inventory",
   "wp_intake",
   "image_harvest",
+  "wp_image_assign",
 ] as const;
 
 export type JobType = (typeof JOB_TYPES)[number];

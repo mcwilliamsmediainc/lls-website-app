@@ -365,7 +365,11 @@ export const photos = pgTable(
       .references(() => clients.id),
     filename: text("filename").notNull(),
     source: photoSourceEnum("source").notNull(),
-    /** Zone the photo is suited to (hero, before_after, gallery, proof, etc.). */
+    /** Harvest classification: hero / team / office / service / location / logo / other.
+     * Durable label the Photo Manager groups + filters on. Set by image_harvest. */
+    category: text("category"),
+    /** Page-zone slot the photo is assigned to (hero, featured, sidebar, gallery, logo).
+     * Written by the assign endpoint; distinct from `category`. */
     zoneType: text("zone_type"),
     pageAssigned: text("page_assigned"),
     altText: text("alt_text"),

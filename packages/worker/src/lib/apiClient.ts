@@ -58,6 +58,7 @@ export const api = {
     body: {
       filename: string;
       source?: "client" | "gbp" | "ai_generated" | "licensed_stock";
+      category?: string;
       zoneType?: string;
       pageAssigned?: string;
       altText?: string;

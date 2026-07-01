@@ -25,6 +25,7 @@ import { redirectMap } from "./handlers/redirect-map.js";
 import { wireframeGenerate } from "./handlers/wireframe-generate.js";
 import { wpIntake } from "./handlers/wp-intake.js";
 import { imageHarvest } from "./handlers/image-harvest.js";
+import { wpImageAssign } from "./handlers/wp-image-assign.js";
 
 const HANDLERS: Record<string, JobHandler> = {
   site_scrape: siteScrape,
@@ -39,6 +40,7 @@ const HANDLERS: Record<string, JobHandler> = {
   wireframe_generate: wireframeGenerate,
   wp_intake: wpIntake,
   image_harvest: imageHarvest,
+  wp_image_assign: wpImageAssign,
 };
 
 const connection = new Redis(env.redisUrl, { maxRetriesPerRequest: null, enableReadyCheck: false });
