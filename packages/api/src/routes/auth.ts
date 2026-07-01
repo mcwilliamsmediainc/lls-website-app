@@ -272,8 +272,8 @@ authRouter.delete(
     const body = totpDeleteSchema.parse(req.body ?? {});
     const targetId = body.userId ?? auth.sub;
 
-    if (targetId !== auth.sub && auth.role !== "matt" && auth.role !== "tyler") {
-      throw new HttpError(403, "Only matt or tyler may reset another member's MFA");
+    if (targetId !== auth.sub && auth.role !== "matt" && auth.role !== "tyler" && auth.role !== "c") {
+      throw new HttpError(403, "Only matt, tyler, or c may reset another member's MFA");
     }
 
     const [target] = await db

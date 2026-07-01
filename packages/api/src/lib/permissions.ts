@@ -44,6 +44,8 @@ const ALL_ROLES: TeamRole[] = [
   "rachelle",
   "clarence",
   "tyler",
+  // Developer account — granted the exact same permission set as "tyler".
+  "c",
 ];
 
 const PUSH_TO_LIVE_BUILD_OVERRIDE = true;
@@ -61,24 +63,24 @@ const PUSH_TO_LIVE_BUILD_OVERRIDE = true;
 const ALLOW_ALL_PERMISSIONS = false;
 
 const MATRIX: Record<Permission, TeamRole[]> = {
-  add_edit_client: ["matt", "tiffany", "elise", "penn", "tyler"],
-  delete_client: ["matt", "tyler"],
+  add_edit_client: ["matt", "tiffany", "elise", "penn", "tyler", "c"],
+  delete_client: ["matt", "tyler", "c"],
   queue_job: ALL_ROLES,
-  push_to_live: PUSH_TO_LIVE_BUILD_OVERRIDE ? ["matt"] : ["matt", "tyler"],
-  edit_client_facts: ["matt", "tiffany", "elise", "tyler"],
+  push_to_live: PUSH_TO_LIVE_BUILD_OVERRIDE ? ["matt"] : ["matt", "tyler", "c"],
+  edit_client_facts: ["matt", "tiffany", "elise", "tyler", "c"],
   approve_content: ["matt", "tiffany", "penn", "rachelle", "clarence"],
-  edit_schema: ["matt", "rachelle", "tyler"],
-  send_wireframe_review_link: ["matt", "tiffany", "elise", "chloe", "tyler"],
-  lock_unlock_revision_rounds: ["matt", "tiffany", "tyler"],
+  edit_schema: ["matt", "rachelle", "tyler", "c"],
+  send_wireframe_review_link: ["matt", "tiffany", "elise", "chloe", "tyler", "c"],
+  lock_unlock_revision_rounds: ["matt", "tiffany", "tyler", "c"],
   view_all_clients: [...ALL_ROLES, "lindsay"],
-  edit_team_members: ["matt", "tyler"],
-  change_kb_documents: ["matt", "tiffany", "rachelle", "tyler"],
-  bypass_style_gate: ["matt", "tyler"],
-  rollback_deployment: ["matt", "tyler"],
+  edit_team_members: ["matt", "tyler", "c"],
+  change_kb_documents: ["matt", "tiffany", "rachelle", "tyler", "c"],
+  bypass_style_gate: ["matt", "tyler", "c"],
+  rollback_deployment: ["matt", "tyler", "c"],
   view_activity_logs: [...ALL_ROLES, "lindsay"],
-  access_settings: ["matt", "tyler"],
-  // Command Center: only matt and tyler may queue instructions for the server operator.
-  queue_command: ["matt", "tyler"],
+  access_settings: ["matt", "tyler", "c"],
+  // Command Center: only matt, tyler, and c may queue instructions for the server operator.
+  queue_command: ["matt", "tyler", "c"],
 };
 
 /** True if the role is allowed to perform the given action. */
@@ -90,7 +92,7 @@ export function can(role: TeamRole, permission: Permission): boolean {
 /** Roles that can read ALL audit logs. Others read only their own (spec Table 32). */
 export function canReadAllAuditLogs(role: TeamRole): boolean {
   if (ALLOW_ALL_PERMISSIONS) return true;
-  return role === "matt" || role === "tyler";
+  return role === "matt" || role === "tyler" || role === "c";
 }
 
 /** Returns the full permission map for a role — handy for the web client UI gating. */

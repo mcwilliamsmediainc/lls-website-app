@@ -41,6 +41,8 @@ export const teamRoleEnum = pgEnum("team_role", [
   "clarence",
   "tyler",
   "lindsay",
+  // Developer account. Full Tyler-level permissions (see permissions.ts MATRIX).
+  "c",
 ]);
 
 /** Pipeline stages (kanban columns). Wireframe deferred to Phase 4.
